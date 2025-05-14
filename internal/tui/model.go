@@ -12,9 +12,12 @@ type Model struct {
 	epoch         uint64
 	checkpointSeq uint64
 	totalWithSig  uint64
+	signedPower   int
+	totalPower    int
 	committee     []types.ValidatorInfo
 	stats         map[string]types.ValidatorStats
-	progressBar   progress.Model
+	validatorBar  progress.Model // Rename progressBar to validatorBar
+	powerBar      progress.Model // Add second progress bar for voting power
 	checkpoints   map[uint64]types.CheckpointInfo
 	latestSeq     uint64
 	width         int // Terminal width
@@ -24,19 +27,29 @@ type Model struct {
 
 // New creates a new bubble tea model
 func New(epochID uint64, validators []types.ValidatorInfo) Model {
-	progressBar := progress.New(progress.WithDefaultGradient())
+	// Create two progress bars with different colors
+	validatorBar := progress.New(
+		progress.WithDefaultGradient(),
+		progress.WithScaledGradient("#5fff87", "#48BB78"),
+	)
+
+	powerBar := progress.New(
+		progress.WithDefaultGradient(),
+		progress.WithScaledGradient("#ffdf5d", "#ECC94B"),
+	)
 
 	// Initialize with zero values for width/height
 	// They'll be updated when WindowSizeMsg is received
 	return Model{
-		epoch:       epochID,
-		committee:   validators,
-		stats:       make(map[string]types.ValidatorStats),
-		progressBar: progressBar,
-		checkpoints: make(map[uint64]types.CheckpointInfo),
-		width:       0,
-		height:      0,
-		ready:       false,
+		epoch:        epochID,
+		committee:    validators,
+		stats:        make(map[string]types.ValidatorStats),
+		validatorBar: validatorBar,
+		powerBar:     powerBar,
+		checkpoints:  make(map[uint64]types.CheckpointInfo),
+		width:        0,
+		height:       0,
+		ready:        false,
 	}
 }
 
@@ -50,6 +63,8 @@ func (m *Model) applySnapshot(msg SnapshotMsg) {
 	m.epoch = msg.Epoch
 	m.checkpointSeq = msg.CheckpointSeq
 	m.totalWithSig = msg.TotalWithSig
+	m.signedPower = msg.SignedPower
+	m.totalPower = msg.TotalPower
 	m.committee = msg.Committee
 	m.stats = msg.Stats
 }

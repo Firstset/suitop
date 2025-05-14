@@ -59,9 +59,14 @@ func (l *Loader) LoadEpochValidatorData(ctx context.Context, targetEpoch uint64)
 	}
 
 	committeePubKeysOrdered := make([]string, len(committeeInfo.Validators))
+	committeeVotingPowersOrdered := make([]int, len(committeeInfo.Validators))
 	for i, valData := range committeeInfo.Validators {
 		if len(valData) > 0 && valData[0] != "" {
-			committeePubKeysOrdered[i] = valData[0] // valData[0] is protocolPubkeyBytes
+			committeePubKeysOrdered[i] = valData[0]                         // valData[0] is protocolPubkeyBytes
+			committeeVotingPowersOrdered[i], err = strconv.Atoi(valData[1]) // valData[1] is votingPower
+			if err != nil {
+				return nil, 0, fmt.Errorf("error parsing voting power from committee info for epoch %s, index %d: %w", epochToQueryStr, i, err)
+			}
 		} else {
 			return nil, 0, fmt.Errorf("malformed validator data or empty pubkey in committee info for epoch %s, index %d", epochToQueryStr, i)
 		}
@@ -103,11 +108,12 @@ func (l *Loader) LoadEpochValidatorData(ctx context.Context, targetEpoch uint64)
 				Name:                fmt.Sprintf("Unknown Validator (Pubkey: %s...)", ShortPubKey(pubKey)),
 				SuiAddress:          fmt.Sprintf("unknown-sui-address-for-%s", ShortPubKey(pubKey)),
 				ProtocolPubkeyBytes: pubKey,
+				VotingPower:         committeeVotingPowersOrdered[bitmapIdx],
 				BitmapIndex:         bitmapIdx,
 			})
 			continue
 		}
-		committee = append(committee, NewValidatorInfo(meta.Name, meta.SuiAddress, pubKey, bitmapIdx))
+		committee = append(committee, NewValidatorInfo(meta.Name, meta.SuiAddress, pubKey, bitmapIdx, committeeVotingPowersOrdered[bitmapIdx]))
 	}
 
 	log.Printf("Successfully loaded and merged data for %d validators for epoch %d.", len(committee), actualEpoch)

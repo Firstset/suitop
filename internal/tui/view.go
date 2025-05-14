@@ -42,26 +42,39 @@ func renderHeader(m Model) string {
 	return header
 }
 
-// renderProgressBar creates the progress bar showing checkpoint signatures
+// renderProgressBar creates the progress bars showing validator and voting power signatures
 func renderProgressBar(m Model) string {
 	// Calculate percentage of validators that signed this checkpoint
-	var percent float64 = 0
+	var validatorPercent float64 = 0
 	if len(m.committee) > 0 {
 		sigCount := countSignaturesForCheckpoint(m)
-		percent = float64(sigCount) / float64(len(m.committee))
+		validatorPercent = float64(sigCount) / float64(len(m.committee))
 	}
 
-	// Create label for the progress bar
-	label := fmt.Sprintf("Validators signed: %.1f%%", percent*100)
+	// Calculate percentage of voting power that signed this checkpoint
+	var powerPercent float64 = 0
+	if m.totalPower > 0 {
+		powerPercent = float64(m.signedPower) / float64(m.totalPower)
+	}
 
-	// Render the progress bar
-	progressContent := m.progressBar.ViewAs(percent)
+	// Create labels for the progress bars
+	validatorLabel := fmt.Sprintf("✓ Validators signed: %.1f%%", validatorPercent*100)
+	powerLabel := fmt.Sprintf("🗳 Voting-power signed: %.1f%%", powerPercent*100)
+
+	// Render the validator progress bar
+	validatorContent := m.validatorBar.ViewAs(validatorPercent)
+
+	// Render the voting power progress bar
+	powerContent := m.powerBar.ViewAs(powerPercent)
 
 	return progressBarStyle.Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
-			label,
-			progressContent,
+			validatorLabel,
+			validatorContent,
+			"", // Add a blank line for separation
+			powerLabel,
+			powerContent,
 		),
 	)
 }

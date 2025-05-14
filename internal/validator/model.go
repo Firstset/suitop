@@ -12,6 +12,7 @@ type ValidatorInfo struct {
 	SuiAddress          string // Used as a persistent key for stats
 	ProtocolPubkeyBytes string // BLS key from committee info / system state
 	BitmapIndex         int    // Index from suix_getCommitteeInfo (0 to N-1), for bitmap lookup
+	VotingPower         int    // Voting power from committee info
 }
 
 // ToTypesInfo converts this ValidatorInfo to a types.ValidatorInfo
@@ -21,6 +22,7 @@ func (v ValidatorInfo) ToTypesInfo() types.ValidatorInfo {
 		SuiAddress:          v.SuiAddress,
 		ProtocolPubkeyBytes: v.ProtocolPubkeyBytes,
 		BitmapIndex:         v.BitmapIndex,
+		VotingPower:         v.VotingPower,
 	}
 }
 
@@ -31,6 +33,7 @@ func FromTypesInfo(v types.ValidatorInfo) ValidatorInfo {
 		SuiAddress:          v.SuiAddress,
 		ProtocolPubkeyBytes: v.ProtocolPubkeyBytes,
 		BitmapIndex:         v.BitmapIndex,
+		VotingPower:         v.VotingPower,
 	}
 }
 
@@ -45,11 +48,12 @@ func ShortPubKey(pubKey string) string {
 
 // NewValidatorInfo creates a new ValidatorInfo struct.
 // This can be expanded if more complex initialization is needed.
-func NewValidatorInfo(name, suiAddress, protocolPubkeyBytes string, bitmapIndex int) ValidatorInfo {
+func NewValidatorInfo(name, suiAddress, protocolPubkeyBytes string, bitmapIndex int, votingPower int) ValidatorInfo {
 	return ValidatorInfo{
 		Name:                strings.TrimSpace(name),
 		SuiAddress:          suiAddress,
 		ProtocolPubkeyBytes: protocolPubkeyBytes,
 		BitmapIndex:         bitmapIndex,
+		VotingPower:         votingPower,
 	}
 }

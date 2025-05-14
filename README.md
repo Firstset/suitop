@@ -5,6 +5,7 @@ Monitors validator uptime on the Sui network by subscribing to checkpoint data. 
 ## Features
 
 - Real-time monitoring of validator signatures on checkpoints
+- Dual progress bars: validator count and voting-power participation per checkpoint
 - Interactive TUI with progress bars and formatted tables
 - Plain text mode for logging or scripting use cases
 - Automatic terminal resizing support

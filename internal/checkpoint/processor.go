@@ -134,10 +134,22 @@ func (p *Processor) Run(ctx context.Context, initialEpoch uint64, initialCommitt
 					statsForUI[k] = v.ToTypesStats()
 				}
 
+				// Calculate voting power metrics
+				totalPower := 0
+				signedPower := 0
+				for _, v := range p.committee {
+					totalPower += v.VotingPower
+					if p.statsManager.IsSigned(v.SuiAddress) {
+						signedPower += v.VotingPower
+					}
+				}
+
 				uiChan <- types.SnapshotMsg{
 					Epoch:         p.currentEpoch,
 					CheckpointSeq: receivedCheckpoint.GetSequenceNumber(),
 					TotalWithSig:  p.statsManager.GetTotalCheckpointsWithSig(),
+					SignedPower:   signedPower,
+					TotalPower:    totalPower,
 					Committee:     committeeForUI,
 					Stats:         statsForUI,
 				}
@@ -158,6 +170,22 @@ func (p *Processor) printReport(checkpointSeqNum uint64, w io.Writer) {
 	totalCheckpointsWithSig := p.statsManager.GetTotalCheckpointsWithSig()
 	fmt.Fprintf(w, "\n--- Checkpoint #%d (Epoch: %d, Total w/Sig: %d) ---\n",
 		checkpointSeqNum, p.currentEpoch, totalCheckpointsWithSig)
+
+	// Calculate voting power metrics
+	totalPower := 0
+	signedPower := 0
+	for _, v := range p.committee {
+		totalPower += v.VotingPower
+		if p.statsManager.IsSigned(v.SuiAddress) {
+			signedPower += v.VotingPower
+		}
+	}
+
+	// Print voting power stats if available
+	if totalPower > 0 {
+		pct := float64(signedPower) / float64(totalPower) * 100
+		fmt.Fprintf(w, "Voting power signed: %.2f%% (%d/%d)\n", pct, signedPower, totalPower)
+	}
 
 	displayCommittee := make([]val.ValidatorInfo, len(p.committee))
 	copy(displayCommittee, p.committee)

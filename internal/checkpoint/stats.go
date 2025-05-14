@@ -92,3 +92,9 @@ func (sm *StatsManager) GetAllStats() map[string]ValidatorStats {
 func (sm *StatsManager) GetTotalCheckpointsWithSig() uint64 {
 	return sm.totalCheckpointsWithSig
 }
+
+// IsSigned checks if a validator has signed the current checkpoint.
+func (sm *StatsManager) IsSigned(suiAddress string) bool {
+	stats, ok := sm.validatorStats[suiAddress]
+	return ok && stats.SignedCurrent
+}

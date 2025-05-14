@@ -6,6 +6,7 @@ type ValidatorInfo struct {
 	SuiAddress          string // Used as a persistent key for stats
 	ProtocolPubkeyBytes string // BLS key from committee info / system state
 	BitmapIndex         int    // Index from suix_getCommitteeInfo (0 to N-1), for bitmap lookup
+	VotingPower         int    // Voting power from committee info
 }
 
 // ValidatorStats tracks the uptime statistics for a validator.
@@ -27,6 +28,8 @@ type SnapshotMsg struct {
 	Epoch         uint64
 	CheckpointSeq uint64
 	TotalWithSig  uint64
+	SignedPower   int // Sum of voting power of validators who signed the checkpoint
+	TotalPower    int // Sum of voting power of all validators in the committee
 	Committee     []ValidatorInfo
 	Stats         map[string]ValidatorStats
 }

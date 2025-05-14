@@ -23,8 +23,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Update the model with the new window size
 		m.width, m.height = msg.Width, msg.Height
 
-		// Also update the progress bar
-		m.progressBar.Width = msg.Width - 20 // Adjust for padding
+		// Update both progress bars
+		m.validatorBar.Width = msg.Width - 20 // Adjust for padding
+		m.powerBar.Width = msg.Width - 20     // Adjust for padding
 
 		// Mark the model as ready to render once we have window dimensions
 		m.ready = true
@@ -38,10 +39,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Handle progress bar updates
-	progressModel, progressCmd := m.progressBar.Update(msg)
-	m.progressBar = progressModel.(progress.Model)
-	if progressCmd != nil {
-		cmd = progressCmd
+	var validatorBarCmd, powerBarCmd tea.Cmd
+	validatorModel, validatorBarCmd := m.validatorBar.Update(msg)
+	powerModel, powerBarCmd := m.powerBar.Update(msg)
+
+	m.validatorBar = validatorModel.(progress.Model)
+	m.powerBar = powerModel.(progress.Model)
+
+	if validatorBarCmd != nil {
+		cmd = validatorBarCmd
+	}
+	if powerBarCmd != nil {
+		cmd = tea.Batch(cmd, powerBarCmd)
 	}
 
 	return m, cmd

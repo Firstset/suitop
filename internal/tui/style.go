@@ -6,13 +6,15 @@ import (
 
 var (
 	// Base colors
-	primaryColor   = lipgloss.Color("#7D56F4")
-	secondaryColor = lipgloss.Color("#2D3748")
-	successColor   = lipgloss.Color("#48BB78")
-	errorColor     = lipgloss.Color("#F56565")
-	warningColor   = lipgloss.Color("#ECC94B")
-	textColor      = lipgloss.Color("#F7FAFC")
-	mutedColor     = lipgloss.Color("#A0AEC0")
+	primaryColor      = lipgloss.Color("#7D56F4")
+	secondaryColor    = lipgloss.Color("#2D3748")
+	successColor      = lipgloss.Color("#48BB78")
+	errorColor        = lipgloss.Color("#F56565")
+	warningColor      = lipgloss.Color("#ECC94B")
+	textColor         = lipgloss.Color("#F7FAFC")
+	mutedColor        = lipgloss.Color("#A0AEC0")
+	validatorBarColor = lipgloss.Color("#5fff87") // Green for validator count bar
+	powerBarColor     = lipgloss.Color("#ffdf5d") // Gold for voting power bar
 
 	// Header styles
 	headerStyle = lipgloss.NewStyle().
@@ -58,6 +60,10 @@ var (
 
 	warningStyle = lipgloss.NewStyle().
 			Foreground(warningColor)
+
+	// Progress bar style variants
+	validatorBarStyle = lipgloss.NewStyle().Foreground(validatorBarColor)
+	powerBarStyle     = lipgloss.NewStyle().Foreground(powerBarColor)
 )
 
 // AdjustStyles updates style widths based on terminal dimensions
