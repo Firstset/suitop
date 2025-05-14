@@ -29,7 +29,7 @@ func main() {
 	plainMode := flag.Bool("plain", false, "Use plain text output instead of TUI")
 	noAltScreen := flag.Bool("no-alt-screen", false, "Run inside current terminal buffer (useful for tmux logs)")
 	logToFile := flag.Bool("log-to-file", false, "Write logs to a file")
-	logFilePath := flag.String("log-file", "", "Path to log file (default: ~/.suitop/logs/suitop.log)")
+	logFilePath := flag.String("log-file", "./logs/suitop.log", "Path to log file (default: ./logs/suitop.log)")
 	flag.Parse()
 
 	// Load configuration
@@ -38,6 +38,11 @@ func main() {
 	// Override config with command line flags if specified
 	if *plainMode {
 		cfg.UIConfig.PlainMode = true
+	} else {
+		cfg.UIConfig.PlainMode = false
+		// Always log to file and never to stderr
+		cfg.LogConfig.ToFile = true
+		cfg.LogConfig.ToStderr = false
 	}
 	if *noAltScreen {
 		cfg.UIConfig.NoAltScreen = true

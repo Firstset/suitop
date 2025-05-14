@@ -30,6 +30,19 @@ var (
 			BorderForeground(primaryColor).
 			Padding(1, 2)
 
+	// Panel styles for the split layout
+	leftPanelStyle  = boxStyle.Copy()
+	rightPanelStyle = boxStyle.Copy()
+
+	// Header panel styles
+	headerBoxStyle = boxStyle.Copy().
+			BorderForeground(primaryColor).
+			Padding(1, 2)
+
+	// Info panel specific style
+	infoPanelStyle = boxStyle.Copy().
+			BorderForeground(primaryColor)
+
 	// Info box style
 	infoBoxStyle = boxStyle.Copy().
 			Width(40)
@@ -64,6 +77,10 @@ var (
 	// Progress bar style variants
 	validatorBarStyle = lipgloss.NewStyle().Foreground(validatorBarColor)
 	powerBarStyle     = lipgloss.NewStyle().Foreground(powerBarColor)
+
+	// Progress bars panel style
+	progressPanelStyle = boxStyle.Copy().
+				BorderForeground(primaryColor)
 )
 
 // AdjustStyles updates style widths based on terminal dimensions
@@ -76,4 +93,14 @@ func AdjustStyles(width int) {
 	boxStyle = boxStyle.Width(boxWidth)
 	infoBoxStyle = infoBoxStyle.Width(boxWidth / 2)
 	progressBarStyle = progressBarStyle.Width(boxWidth)
+
+	// Adjust panel widths
+	halfWidth := (width / 2) - 3 // Account for padding and borders
+	leftPanelStyle = leftPanelStyle.Width(halfWidth)
+	rightPanelStyle = rightPanelStyle.Width(halfWidth)
+
+	// Adjust header panels
+	headerBoxStyle = headerBoxStyle.Width(halfWidth)
+	infoPanelStyle = infoPanelStyle.Width(halfWidth)
+	progressPanelStyle = progressPanelStyle.Width(halfWidth)
 }

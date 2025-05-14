@@ -2,6 +2,8 @@ package tui
 
 import (
 	"fmt"
+	"sort"
+	"time"
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/lipgloss"
@@ -18,33 +20,65 @@ func (m Model) View() string {
 	AdjustStyles(m.width)
 
 	// Build the view components
-	header := renderHeader(m)
-	progressSection := renderProgressBar(m)
-	tableSection := renderTable(m)
+	headerRow := renderHeaderRow(m)
+	mainContent := renderMainContent(m)
 
 	// Combine all sections
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
-		header,
-		progressSection,
-		tableSection,
+		headerRow,
+		mainContent,
 	)
 }
 
-// renderHeader creates the header section with epoch and checkpoint info
-func renderHeader(m Model) string {
-	title := fmt.Sprintf("SUI Validator Dashboard - Epoch %d", m.epoch)
-	info := fmt.Sprintf("Checkpoint: %d", m.checkpointSeq)
+// renderHeaderRow creates the top row with two panels side by side
+func renderHeaderRow(m Model) string {
+	// Left panel with info
+	infoPanel := renderInfoPanel(m)
 
-	// Combine title and info in header
-	header := headerStyle.Render(title + " - " + info)
+	// Right panel with progress bars
+	progressPanel := renderProgressPanel(m)
 
-	return header
+	// Join them horizontally
+	return lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		infoPanel,
+		progressPanel,
+	)
 }
 
-// renderProgressBar creates the progress bars showing validator and voting power signatures
-func renderProgressBar(m Model) string {
-	// Calculate percentage of validators that signed this checkpoint
+// renderInfoPanel creates the info panel with epoch, checkpoint, and stats
+func renderInfoPanel(m Model) string {
+	// Format the basic information
+	epochInfo := fmt.Sprintf("Epoch: %d", m.epoch)
+	checkpointInfo := fmt.Sprintf("Checkpoint: %d", m.checkpointSeq)
+	committeeSize := fmt.Sprintf("Committee Size: %d validators", len(m.committee))
+
+	// Format time
+	currentTime := time.Now().Format("2006-01-02 15:04:05")
+	timeInfo := fmt.Sprintf("Time: %s", currentTime)
+
+	// Join vertically
+	content := lipgloss.JoinVertical(
+		lipgloss.Left,
+		epochInfo,
+		checkpointInfo,
+		committeeSize,
+		timeInfo,
+	)
+
+	return infoPanelStyle.Render(
+		lipgloss.JoinVertical(
+			lipgloss.Left,
+			"SUI Network Statistics",
+			content,
+		),
+	)
+}
+
+// renderProgressPanel creates the progress bars panel
+func renderProgressPanel(m Model) string {
+	// Calculate percentages
 	var validatorPercent float64 = 0
 	if len(m.committee) > 0 {
 		sigCount := countSignaturesForCheckpoint(m)
@@ -67,35 +101,33 @@ func renderProgressBar(m Model) string {
 	// Render the voting power progress bar
 	powerContent := m.powerBar.ViewAs(powerPercent)
 
-	return progressBarStyle.Render(
+	progressContent := lipgloss.JoinVertical(
+		lipgloss.Left,
+		validatorLabel,
+		validatorContent,
+		"", // Add a blank line for separation
+		powerLabel,
+		powerContent,
+	)
+
+	return progressPanelStyle.Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
-			validatorLabel,
-			validatorContent,
-			"", // Add a blank line for separation
-			powerLabel,
-			powerContent,
+			"Checkpoint Signatures",
+			progressContent,
 		),
 	)
 }
 
-// renderTable creates the table of validators with their stats
-func renderTable(m Model) string {
-	// Set up table columns
-	columns := []table.Column{
-		{Title: "Status", Width: 6},
-		{Title: "Validator", Width: 40},
-		{Title: "Uptime %", Width: 10},
-		{Title: "Signed/Total", Width: 15},
-	}
-
+// renderMainContent creates the main body with the validator table in two columns
+func renderMainContent(m Model) string {
 	// Only initialize the table if we have committee data
 	if m.committee == nil || len(m.committee) == 0 {
 		return boxStyle.Render("Waiting for validator data...")
 	}
 
-	// Build table rows from committee and stats data
-	var rows []table.Row
+	// Build all validator rows
+	var allRows []table.Row
 	for _, validator := range m.committee {
 		id := validator.SuiAddress
 		stats, ok := m.stats[id]
@@ -125,7 +157,7 @@ func renderTable(m Model) string {
 		}
 
 		// Add the row
-		rows = append(rows, table.Row{
+		allRows = append(allRows, table.Row{
 			status,
 			validator.Name,
 			uptimePercent,
@@ -133,25 +165,57 @@ func renderTable(m Model) string {
 		})
 	}
 
-	// Create and style the table
-	t := table.New(
+	// Sort rows by validator name
+	sort.Slice(allRows, func(i, j int) bool {
+		return allRows[i][1] < allRows[j][1]
+	})
+
+	// Split rows into two groups for two columns
+	leftRows := allRows[:len(allRows)/2]
+	rightRows := allRows[len(allRows)/2:]
+
+	// Table columns definition
+	columns := []table.Column{
+		{Title: "Status", Width: 6},
+		{Title: "Validator", Width: 30},
+		{Title: "Uptime %", Width: 10},
+		{Title: "Signed/Total", Width: 15},
+	}
+
+	// Create left table
+	leftTable := table.New(
 		table.WithColumns(columns),
-		table.WithRows(rows),
-		table.WithHeight(m.height-15), // Adjust height to fit in screen
+		table.WithRows(leftRows),
+		table.WithHeight(m.height-13), // Adjust height to fit in screen
 	)
 
-	// Style the table
-	t.SetStyles(table.Styles{
+	// Create right table
+	rightTable := table.New(
+		table.WithColumns(columns),
+		table.WithRows(rightRows),
+		table.WithHeight(m.height-13), // Adjust height to fit in screen
+	)
+
+	// Style both tables
+	leftTable.SetStyles(table.Styles{
 		Header: tableHeaderStyle,
 		Cell:   tableCellStyle,
 	})
 
-	return boxStyle.Render(
-		lipgloss.JoinVertical(
-			lipgloss.Left,
-			"Validator Status",
-			t.View(),
-		),
+	rightTable.SetStyles(table.Styles{
+		Header: tableHeaderStyle,
+		Cell:   tableCellStyle,
+	})
+
+	// Render left and right tables
+	leftTableView := leftPanelStyle.Render(leftTable.View())
+	rightTableView := rightPanelStyle.Render(rightTable.View())
+
+	// Join tables horizontally
+	return lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		leftTableView,
+		rightTableView,
 	)
 }
 
