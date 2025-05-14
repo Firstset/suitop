@@ -24,8 +24,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width, m.height = msg.Width, msg.Height
 
 		// Update both progress bars
-		m.validatorBar.Width = msg.Width - 20 // Adjust for padding
-		m.powerBar.Width = msg.Width - 20     // Adjust for padding
+		m.validatorBar.Width = msg.Width - 20   // Adjust for padding
+		m.votingPowerBar.Width = msg.Width - 20 // Adjust for padding
 
 		// Mark the model as ready to render once we have window dimensions
 		m.ready = true
@@ -39,18 +39,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Handle progress bar updates
-	var validatorBarCmd, powerBarCmd tea.Cmd
+	var validatorBarCmd, votingPowerBarCmd tea.Cmd
 	validatorModel, validatorBarCmd := m.validatorBar.Update(msg)
-	powerModel, powerBarCmd := m.powerBar.Update(msg)
+	votingPowerModel, votingPowerBarCmd := m.votingPowerBar.Update(msg)
 
 	m.validatorBar = validatorModel.(progress.Model)
-	m.powerBar = powerModel.(progress.Model)
+	m.votingPowerBar = votingPowerModel.(progress.Model)
 
 	if validatorBarCmd != nil {
 		cmd = validatorBarCmd
 	}
-	if powerBarCmd != nil {
-		cmd = tea.Batch(cmd, powerBarCmd)
+	if votingPowerBarCmd != nil {
+		cmd = tea.Batch(cmd, votingPowerBarCmd)
 	}
 
 	return m, cmd

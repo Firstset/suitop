@@ -23,9 +23,13 @@ func (m Model) View() string {
 	headerRow := renderHeaderRow(m)
 	mainContent := renderMainContent(m)
 
-	// Combine all sections
+	// Add top margin to show the header border
+	topMargin := "\n\n\n\n"
+
+	// Combine all sections with top margin
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
+		topMargin,
 		headerRow,
 		mainContent,
 	)
@@ -79,42 +83,42 @@ func renderInfoPanel(m Model) string {
 // renderProgressPanel creates the progress bars panel
 func renderProgressPanel(m Model) string {
 	// Calculate percentages
-	var validatorPercent float64 = 0
-	if len(m.committee) > 0 {
-		sigCount := countSignaturesForCheckpoint(m)
-		validatorPercent = float64(sigCount) / float64(len(m.committee))
+	validatorPercent := 0.0
+	if m.totalValidators > 0 {
+		validatorPercent = float64(m.signedValidators) / float64(m.totalValidators) * 100
 	}
 
-	// Calculate percentage of voting power that signed this checkpoint
-	var powerPercent float64 = 0
-	if m.totalPower > 0 {
-		powerPercent = float64(m.signedPower) / float64(m.totalPower)
+	votingPercent := 0.0
+	if m.totalVotingPower > 0 {
+		votingPercent = float64(m.signedVotingPower) / float64(m.totalVotingPower) * 100
 	}
 
-	// Create labels for the progress bars
-	validatorLabel := fmt.Sprintf("✓ Validators signed: %.1f%%", validatorPercent*100)
-	powerLabel := fmt.Sprintf("🗳 Voting-power signed: %.1f%%", powerPercent*100)
+	// Format percentages with consistent width
+	valPercentStr := fmt.Sprintf("%d%%", int(validatorPercent))
+	votePercentStr := fmt.Sprintf("%d%%", int(votingPercent))
 
-	// Render the validator progress bar
-	validatorContent := m.validatorBar.ViewAs(validatorPercent)
+	// Create compact labels
+	valLabel := fmt.Sprintf("✓ Validators: %s", valPercentStr)
+	voteLabel := fmt.Sprintf("🗳 Voting power: %s", votePercentStr)
 
-	// Render the voting power progress bar
-	powerContent := m.powerBar.ViewAs(powerPercent)
+	// Render the progress bars with the calculated percentages
+	validatorContent := m.validatorBar.ViewAs(validatorPercent / 100) // ViewAs expects 0.0-1.0
+	votingContent := m.votingPowerBar.ViewAs(votingPercent / 100)     // ViewAs expects 0.0-1.0
 
-	progressContent := lipgloss.JoinVertical(
+	content := lipgloss.JoinVertical(
 		lipgloss.Left,
-		validatorLabel,
+		lipgloss.NewStyle().Bold(true).Render(valLabel),
 		validatorContent,
-		"", // Add a blank line for separation
-		powerLabel,
-		powerContent,
+		"", // Add space between bars
+		lipgloss.NewStyle().Bold(true).Render(voteLabel),
+		votingContent,
 	)
 
 	return progressPanelStyle.Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
-			"Checkpoint Signatures",
-			progressContent,
+			"SUI Network Status",
+			content,
 		),
 	)
 }

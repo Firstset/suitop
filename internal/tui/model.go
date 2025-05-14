@@ -9,47 +9,55 @@ import (
 
 // Model represents the UI state
 type Model struct {
-	epoch         uint64
-	checkpointSeq uint64
-	totalWithSig  uint64
-	signedPower   int
-	totalPower    int
-	committee     []types.ValidatorInfo
-	stats         map[string]types.ValidatorStats
-	validatorBar  progress.Model // Rename progressBar to validatorBar
-	powerBar      progress.Model // Add second progress bar for voting power
-	checkpoints   map[uint64]types.CheckpointInfo
-	latestSeq     uint64
-	width         int // Terminal width
-	height        int // Terminal height
-	ready         bool
+	epoch          uint64
+	checkpointSeq  uint64
+	totalWithSig   uint64
+	signedPower    int
+	totalPower     int
+	committee      []types.ValidatorInfo
+	stats          map[string]types.ValidatorStats
+	validatorBar   progress.Model
+	votingPowerBar progress.Model
+	checkpoints    map[uint64]types.CheckpointInfo
+	latestSeq      uint64
+	width          int // Terminal width
+	height         int // Terminal height
+	ready          bool
+
+	// Calculated fields for progress bars
+	signedValidators  int
+	totalValidators   int
+	signedVotingPower int
+	totalVotingPower  int
 }
 
 // New creates a new bubble tea model
 func New(epochID uint64, validators []types.ValidatorInfo) Model {
-	// Create two progress bars with different colors
+	// Create progress bars with different colors
 	validatorBar := progress.New(
 		progress.WithDefaultGradient(),
 		progress.WithScaledGradient("#5fff87", "#48BB78"),
 	)
 
-	powerBar := progress.New(
+	votingPowerBar := progress.New(
 		progress.WithDefaultGradient(),
 		progress.WithScaledGradient("#ffdf5d", "#ECC94B"),
 	)
 
-	// Initialize with zero values for width/height
-	// They'll be updated when WindowSizeMsg is received
 	return Model{
-		epoch:        epochID,
-		committee:    validators,
-		stats:        make(map[string]types.ValidatorStats),
-		validatorBar: validatorBar,
-		powerBar:     powerBar,
-		checkpoints:  make(map[uint64]types.CheckpointInfo),
-		width:        0,
-		height:       0,
-		ready:        false,
+		epoch:             epochID,
+		committee:         validators,
+		stats:             make(map[string]types.ValidatorStats),
+		validatorBar:      validatorBar,
+		votingPowerBar:    votingPowerBar,
+		checkpoints:       make(map[uint64]types.CheckpointInfo),
+		width:             0,
+		height:            0,
+		ready:             false,
+		totalValidators:   len(validators),
+		signedValidators:  0,
+		totalVotingPower:  0,
+		signedVotingPower: 0,
 	}
 }
 
@@ -67,6 +75,12 @@ func (m *Model) applySnapshot(msg SnapshotMsg) {
 	m.totalPower = msg.TotalPower
 	m.committee = msg.Committee
 	m.stats = msg.Stats
+
+	// Update calculated fields
+	m.totalValidators = len(m.committee)
+	m.signedValidators = countSignaturesForCheckpoint(*m)
+	m.signedVotingPower = m.signedPower
+	m.totalVotingPower = m.totalPower
 }
 
 // SubscribeToStateUpdates creates a command that listens for state updates
