@@ -1,6 +1,14 @@
 # Sui Uptime Monitor
 
-Monitors validator uptime on the Sui network by subscribing to checkpoint data.
+Monitors validator uptime on the Sui network by subscribing to checkpoint data. Features a modern terminal user interface (TUI) with real-time updates.
+
+## Features
+
+- Real-time monitoring of validator signatures on checkpoints
+- Interactive TUI with progress bars and formatted tables
+- Plain text mode for logging or scripting use cases
+- Automatic terminal resizing support
+- Graceful shutdown handling for clean exits
 
 ## Configuration
 
@@ -12,6 +20,19 @@ The application can be configured using environment variables:
 - `GRPC_USE_TLS`: Set to `true` or `false` to enable/disable TLS for gRPC (default: `true`).
 - `GRPC_INSECURE_SKIP_VERIFY`: Set to `true` or `false` to skip TLS certificate verification for gRPC (default: `true`).
 - `SUBSCRIBER_RETRY_DELAY_MS`: Delay in milliseconds before retrying gRPC subscription (default: 1000).
+- `PLAIN_MODE`: Set to `true` to use plain text output instead of TUI (default: `false`).
+- `NO_ALT_SCREEN`: Set to `true` to run inside current terminal buffer (default: `false`).
+- `LOG_TO_FILE`: Set to `true` to write logs to a file (default: `false`).
+- `LOG_FILE_PATH`: Path to log file (default: `~/.suitop/logs/suitop.log`).
+
+## Command-line Flags
+
+These flags override the corresponding environment variables:
+
+- `--plain`: Use plain text output instead of TUI
+- `--no-alt-screen`: Run inside current terminal buffer (useful for tmux logs)
+- `--log-to-file`: Write logs to a file
+- `--log-file [path]`: Path to log file
 
 ## Building
 
@@ -27,8 +48,24 @@ go build -ldflags "-X suitop/internal/version.GitCommit=$(git rev-parse HEAD) -X
 ## Running
 
 ```bash
+# Run with default TUI mode
 ./suitop
+
+# Run with plain text output
+./suitop --plain
+
+# Run inside current terminal buffer (good for tmux sessions)
+./suitop --no-alt-screen
+
+# Run with logging to a file
+./suitop --log-to-file --log-file /path/to/logfile.log
 ```
+
+## Usage
+
+- Press `q` or `Ctrl+C` to quit the application
+- Terminal resizing is automatically handled
+- Use `SIGINT` (Ctrl+C) or `SIGTERM` for graceful shutdown
 
 ## Project Structure
 
@@ -60,6 +97,14 @@ suitop/
 │   ├── validator/           
 │   │   ├── model.go         
 │   │   └── loader.go        
+│   ├── tui/                 
+│   │   ├── messages.go      
+│   │   ├── model.go         
+│   │   ├── update.go        
+│   │   ├── view.go          
+│   │   └── style.go         
+│   ├── types/               
+│   │   └── common.go        
 │   ├── util/                
 │   │   ├── logger.go        
 │   │   ├── retry.go         

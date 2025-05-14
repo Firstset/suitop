@@ -3,10 +3,13 @@ package checkpoint
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"sort"
 
 	"suitop/internal/config"
+	"suitop/internal/types"
 	val "suitop/internal/validator" // Alias for validator package
 
 	// Assuming pb types will be accessible via this path after go.mod setup
@@ -22,20 +25,24 @@ type Processor struct {
 	cfg          config.ProcessorConfig // Placeholder for future config
 	currentEpoch uint64
 	committee    []val.ValidatorInfo
+	plainMode    bool // When true, output to stdout instead of TUI
 }
 
 // NewProcessor creates a new checkpoint processor.
-func NewProcessor(valLoader *val.Loader, statsManager *StatsManager, cfg config.ProcessorConfig) *Processor {
+func NewProcessor(valLoader *val.Loader, statsManager *StatsManager, cfg config.ProcessorConfig, plainMode bool) *Processor {
 	return &Processor{
 		valLoader:    valLoader,
 		statsManager: statsManager,
 		cfg:          cfg,
+		plainMode:    plainMode,
 	}
 }
 
 // Run starts the checkpoint processing loop.
 // It takes the initial epoch and committee as arguments.
-func (p *Processor) Run(ctx context.Context, initialEpoch uint64, initialCommittee []val.ValidatorInfo, checkpointStream <-chan *rpcPb.Checkpoint) {
+// The optional uiChan parameter sends state snapshots to the UI if provided.
+func (p *Processor) Run(ctx context.Context, initialEpoch uint64, initialCommittee []val.ValidatorInfo,
+	checkpointStream <-chan *rpcPb.Checkpoint, uiChan chan<- types.SnapshotMsg) {
 	p.currentEpoch = initialEpoch
 	p.committee = initialCommittee
 
@@ -60,7 +67,12 @@ func (p *Processor) Run(ctx context.Context, initialEpoch uint64, initialCommitt
 
 			// Epoch change detection and committee reload
 			if checkpointEpochVal > p.currentEpoch {
-				fmt.Printf("\nEpoch changed from %d to %d. Reloading committee...\n", p.currentEpoch, checkpointEpochVal)
+				if p.plainMode {
+					fmt.Printf("\nEpoch changed from %d to %d. Reloading committee...\n", p.currentEpoch, checkpointEpochVal)
+				} else {
+					log.Printf("Epoch changed from %d to %d. Reloading committee...", p.currentEpoch, checkpointEpochVal)
+				}
+
 				p.currentEpoch = checkpointEpochVal
 				newCommittee, newLoadedEpoch, err := p.valLoader.LoadEpochValidatorData(ctx, checkpointEpochVal)
 				if err != nil {
@@ -69,7 +81,12 @@ func (p *Processor) Run(ctx context.Context, initialEpoch uint64, initialCommitt
 					p.committee = newCommittee
 					p.currentEpoch = newLoadedEpoch // Ensure currentEpoch matches what was loaded
 					p.statsManager.InitializeCommitteeStats(newCommittee)
-					fmt.Printf("Successfully reloaded committee for epoch %d with %d validators.\n", p.currentEpoch, len(p.committee))
+
+					if p.plainMode {
+						fmt.Printf("Successfully reloaded committee for epoch %d with %d validators.\n", p.currentEpoch, len(p.committee))
+					} else {
+						log.Printf("Successfully reloaded committee for epoch %d with %d validators.", p.currentEpoch, len(p.committee))
+					}
 				}
 			}
 
@@ -102,7 +119,32 @@ func (p *Processor) Run(ctx context.Context, initialEpoch uint64, initialCommitt
 				}
 			}
 
-			p.printReport(receivedCheckpoint.GetSequenceNumber())
+			// If uiChan is provided, send a snapshot to the UI
+			if uiChan != nil {
+				// Convert the internal validator info to the types package format
+				committeeForUI := make([]types.ValidatorInfo, len(p.committee))
+				for i, v := range p.committee {
+					committeeForUI[i] = v.ToTypesInfo()
+				}
+
+				// Convert the stats map to the types package format
+				statsForUI := make(map[string]types.ValidatorStats)
+				allStats := p.statsManager.GetAllStats()
+				for k, v := range allStats {
+					statsForUI[k] = v.ToTypesStats()
+				}
+
+				uiChan <- types.SnapshotMsg{
+					Epoch:         p.currentEpoch,
+					CheckpointSeq: receivedCheckpoint.GetSequenceNumber(),
+					TotalWithSig:  p.statsManager.GetTotalCheckpointsWithSig(),
+					Committee:     committeeForUI,
+					Stats:         statsForUI,
+				}
+			} else {
+				// If no UI channel, fall back to printing to console (which should be plain mode)
+				p.printReport(receivedCheckpoint.GetSequenceNumber(), os.Stdout)
+			}
 
 		case <-ctx.Done():
 			log.Println("Context done, exiting processor loop.")
@@ -111,9 +153,10 @@ func (p *Processor) Run(ctx context.Context, initialEpoch uint64, initialCommitt
 	}
 }
 
-func (p *Processor) printReport(checkpointSeqNum uint64) {
+// printReport outputs a formatted report of the current validator status to the provided writer
+func (p *Processor) printReport(checkpointSeqNum uint64, w io.Writer) {
 	totalCheckpointsWithSig := p.statsManager.GetTotalCheckpointsWithSig()
-	fmt.Printf("\n--- Checkpoint #%d (Epoch: %d, Total w/Sig: %d) ---\n",
+	fmt.Fprintf(w, "\n--- Checkpoint #%d (Epoch: %d, Total w/Sig: %d) ---\n",
 		checkpointSeqNum, p.currentEpoch, totalCheckpointsWithSig)
 
 	displayCommittee := make([]val.ValidatorInfo, len(p.committee))
@@ -144,11 +187,11 @@ func (p *Processor) printReport(checkpointSeqNum uint64) {
 	}
 
 	for j := 0; j < len(linesToPrint); j += 2 {
-		fmt.Print(linesToPrint[j])
+		fmt.Fprint(w, linesToPrint[j])
 		if j+1 < len(linesToPrint) {
-			fmt.Printf("   |   %s\n", linesToPrint[j+1])
+			fmt.Fprintf(w, "   |   %s\n", linesToPrint[j+1])
 		} else {
-			fmt.Println()
+			fmt.Fprintln(w)
 		}
 	}
 }

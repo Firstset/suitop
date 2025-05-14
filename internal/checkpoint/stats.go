@@ -1,13 +1,31 @@
 package checkpoint
 
 import (
+	"suitop/internal/types"
 	valmodel "suitop/internal/validator"
 )
 
 // ValidatorStats tracks the uptime statistics for a validator.
+// This is a copy of types.ValidatorStats for internal usage.
 type ValidatorStats struct {
 	AttestedCount uint64
 	SignedCurrent bool // Did they sign the most recently processed checkpoint?
+}
+
+// ToTypesStats converts a ValidatorStats to types.ValidatorStats
+func (v ValidatorStats) ToTypesStats() types.ValidatorStats {
+	return types.ValidatorStats{
+		AttestedCount: v.AttestedCount,
+		SignedCurrent: v.SignedCurrent,
+	}
+}
+
+// FromTypesStats creates a ValidatorStats from types.ValidatorStats
+func FromTypesStats(v types.ValidatorStats) ValidatorStats {
+	return ValidatorStats{
+		AttestedCount: v.AttestedCount,
+		SignedCurrent: v.SignedCurrent,
+	}
 }
 
 // StatsManager manages the statistics for all validators.

@@ -3,15 +3,20 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"flag"
 	"fmt"
 	"log"
+	"os"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
 	"suitop/internal/checkpoint"
 	"suitop/internal/config"
 	sgrpc "suitop/internal/grpc"
+	"suitop/internal/tui"
+	"suitop/internal/types"
 	"suitop/internal/util"
 	"suitop/internal/validator"
 
@@ -20,9 +25,45 @@ import (
 )
 
 func main() {
-	cfg := config.Load() // We'll define this package and function later
+	// Parse command line flags
+	plainMode := flag.Bool("plain", false, "Use plain text output instead of TUI")
+	noAltScreen := flag.Bool("no-alt-screen", false, "Run inside current terminal buffer (useful for tmux logs)")
+	logToFile := flag.Bool("log-to-file", false, "Write logs to a file")
+	logFilePath := flag.String("log-file", "", "Path to log file (default: ~/.suitop/logs/suitop.log)")
+	flag.Parse()
 
-	fmt.Printf("Connecting to Sui node for subscriptions: %s\n", cfg.SuiNode)
+	// Load configuration
+	cfg := config.Load()
+
+	// Override config with command line flags if specified
+	if *plainMode {
+		cfg.UIConfig.PlainMode = true
+	}
+	if *noAltScreen {
+		cfg.UIConfig.NoAltScreen = true
+	}
+	if *logToFile {
+		cfg.LogConfig.ToFile = true
+	}
+	if *logFilePath != "" {
+		cfg.LogConfig.FilePath = *logFilePath
+	}
+
+	// Setup logging
+	logCleanup, err := util.SetupLogging(util.LogConfig{
+		ToStderr:  cfg.LogConfig.ToStderr,
+		ToFile:    cfg.LogConfig.ToFile,
+		FilePath:  cfg.LogConfig.FilePath,
+		WithTime:  cfg.LogConfig.WithTime,
+		WithLevel: cfg.LogConfig.WithLevel,
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error setting up logging: %v\n", err)
+		os.Exit(1)
+	}
+	defer logCleanup()
+
+	log.Printf("Connecting to Sui node for subscriptions: %s", cfg.SuiNode)
 
 	// Shared context for managing shutdown
 	ctx, cancel := context.WithCancel(context.Background())
@@ -56,7 +97,7 @@ func main() {
 	}
 	defer conn.Close()
 
-	fmt.Println("Successfully connected to gRPC node for subscriptions.")
+	log.Println("Successfully connected to gRPC node for subscriptions.")
 
 	subClient := subPb.NewSubscriptionServiceClient(conn)
 
@@ -82,11 +123,70 @@ func main() {
 	// The subscriber will take the config for retry delays etc.
 	go sgrpc.SubscribeToCheckpoints(ctx, subClient, checkpointStream, cfg.GRPCSubscriberConfig)
 
-	fmt.Println("Starting checkpoint processing loop...")
+	log.Println("Starting checkpoint processing loop...")
 
 	// The processor will contain the main loop logic
-	processor := checkpoint.NewProcessor(valLoader, statsManager, cfg.ProcessorConfig)
-	processor.Run(ctx, initialEpoch, initialCommittee, checkpointStream)
+	processor := checkpoint.NewProcessor(valLoader, statsManager, cfg.ProcessorConfig, cfg.UIConfig.PlainMode)
 
-	fmt.Println("Application shut down.")
+	if cfg.UIConfig.PlainMode {
+		// In plain mode, run the processor directly in this goroutine
+		processor.Run(ctx, initialEpoch, initialCommittee, checkpointStream, nil)
+	} else {
+		// Channel for sending state updates to the UI
+		stateChan := make(chan types.SnapshotMsg, 200)
+
+		// Start the processor in a goroutine
+		go processor.Run(ctx, initialEpoch, initialCommittee, checkpointStream, stateChan)
+
+		// Convert the validator info to the types package format for the UI
+		committeeForUI := make([]types.ValidatorInfo, len(initialCommittee))
+		for i, v := range initialCommittee {
+			committeeForUI[i] = v.ToTypesInfo()
+		}
+
+		// Initialize the Bubble Tea model
+		model := tui.New(initialEpoch, committeeForUI)
+
+		// Program options based on config
+		programOpts := []tea.ProgramOption{
+			tea.WithMouseCellMotion(), // Enable mouse support for future interactions
+		}
+
+		// Add alt screen option if not disabled
+		if !cfg.UIConfig.NoAltScreen {
+			programOpts = append(programOpts, tea.WithAltScreen())
+		}
+
+		// Create the tea program with all necessary options
+		p := tea.NewProgram(model, programOpts...)
+
+		// Set up a goroutine to relay state updates from the processor to the UI
+		go func() {
+			for {
+				select {
+				case msg, ok := <-stateChan:
+					if !ok {
+						return // Channel closed
+					}
+					p.Send(tui.SnapshotMsg(msg))
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+
+		// Allow for graceful shutdown by quitting the program when the context is done
+		go func() {
+			<-ctx.Done()
+			log.Println("Shutdown signal received, closing UI...")
+			p.Quit()
+		}()
+
+		// Start the UI in the main goroutine
+		if err := p.Start(); err != nil {
+			log.Fatalf("Error running UI: %v", err)
+		}
+	}
+
+	log.Println("Application shut down.")
 }

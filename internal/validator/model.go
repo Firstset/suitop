@@ -2,14 +2,36 @@ package validator
 
 import (
 	"strings"
+	"suitop/internal/types"
 )
 
 // ValidatorInfo holds static information about a validator in a specific epoch's committee.
+// This is a copy of the types.ValidatorInfo struct for internal usage.
 type ValidatorInfo struct {
 	Name                string
 	SuiAddress          string // Used as a persistent key for stats
 	ProtocolPubkeyBytes string // BLS key from committee info / system state
 	BitmapIndex         int    // Index from suix_getCommitteeInfo (0 to N-1), for bitmap lookup
+}
+
+// ToTypesInfo converts this ValidatorInfo to a types.ValidatorInfo
+func (v ValidatorInfo) ToTypesInfo() types.ValidatorInfo {
+	return types.ValidatorInfo{
+		Name:                v.Name,
+		SuiAddress:          v.SuiAddress,
+		ProtocolPubkeyBytes: v.ProtocolPubkeyBytes,
+		BitmapIndex:         v.BitmapIndex,
+	}
+}
+
+// FromTypesInfo creates a ValidatorInfo from a types.ValidatorInfo
+func FromTypesInfo(v types.ValidatorInfo) ValidatorInfo {
+	return ValidatorInfo{
+		Name:                v.Name,
+		SuiAddress:          v.SuiAddress,
+		ProtocolPubkeyBytes: v.ProtocolPubkeyBytes,
+		BitmapIndex:         v.BitmapIndex,
+	}
 }
 
 // shortPubKey is a helper function to shorten pubkey for logging.
