@@ -17,7 +17,7 @@ func (m Model) View() string {
 	}
 
 	// Adjust styles based on terminal size
-	AdjustStyles(m.width)
+	AdjustStyles(m.width, m.leftWidth, m.rightWidth)
 
 	// Build the view components
 	headerRow := renderHeaderRow(m)

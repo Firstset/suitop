@@ -84,27 +84,27 @@ var (
 )
 
 // AdjustStyles updates style widths based on terminal dimensions
-func AdjustStyles(width int) {
+func AdjustStyles(total, left, right int) {
 	// Adjust header to full width
-	headerStyle = headerStyle.Width(width - 4)
+	headerStyle = headerStyle.Width(total - 4)
 
 	// Adjust boxes
-	boxWidth := width - 4
+	boxWidth := total - 4
 	boxStyle = boxStyle.Width(boxWidth)
 	infoBoxStyle = infoBoxStyle.Width(boxWidth / 2)
 
 	// Calculate panel widths accounting for borders and padding
-	halfWidth := (width / 2) - 3 // Account for padding and borders
+	halfWidth := (total / 2) - 3 // Account for padding and borders
 
 	// Set both panels to same height and width
 	height := 8
-	leftPanelStyle = leftPanelStyle.Width(halfWidth).Height(height)
-	rightPanelStyle = rightPanelStyle.Width(halfWidth).Height(height)
+	leftPanelStyle = leftPanelStyle.Width(left).Height(height)
+	rightPanelStyle = rightPanelStyle.Width(right).Height(height)
 
 	// Make header panels same height and width
-	headerBoxStyle = headerBoxStyle.Width(halfWidth).Height(height)
-	infoPanelStyle = infoPanelStyle.Width(halfWidth).Height(height)
-	progressPanelStyle = progressPanelStyle.Width(width).Height(height)
+	headerBoxStyle = headerBoxStyle.Width(total).Height(height)
+	infoPanelStyle = infoPanelStyle.Width(left).Height(height)
+	progressPanelStyle = progressPanelStyle.Width(right).Height(height)
 
 	// Make the progress bar container narrower than its panel
 	// to account for borders, padding, and label text

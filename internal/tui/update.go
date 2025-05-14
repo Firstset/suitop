@@ -20,18 +20,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.WindowSizeMsg:
-		// Update the model with the new window size
 		m.width, m.height = msg.Width, msg.Height
 
-		// Update both progress bars
-		m.validatorBar.Width = msg.Width - 20   // Adjust for padding
-		m.votingPowerBar.Width = msg.Width - 20 // Adjust for padding
+		gap := 4                          // 1‑char gap between panels + border rounding
+		m.leftWidth = (m.width - gap) / 2 // integer division -> left column
+		m.rightWidth = m.width - m.leftWidth - gap
 
-		// Mark the model as ready to render once we have window dimensions
+		interior := func(boxWidth int) int {
+			border := 2 // lipgloss border adds 2 chars
+			pad := 4    // we use Padding(1,2) → left+right = 4
+			return boxWidth - border - pad
+		}
+
+		barWidth := interior(m.rightWidth)
+
+		m.validatorBar.Width = barWidth
+		m.votingPowerBar.Width = barWidth
+
+		// update style widths
+		AdjustStyles(m.width, m.leftWidth, m.rightWidth)
+
 		m.ready = true
-
-		// Update the table (will be fully implemented in view.go)
-		// Adjust column widths based on the new window size
 
 	case SnapshotMsg:
 		// Apply the snapshot to the model state
