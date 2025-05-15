@@ -110,6 +110,30 @@ func renderProgressPanel(m Model) string {
 	)
 }
 
+func renderBar(uptime float64) string {
+	// Define the total width of the bar content (excluding brackets)
+	const barWidth = 10
+
+	// Calculate how many filled characters to show based on uptime percentage
+	filled := int(uptime * barWidth)
+	if filled > barWidth {
+		filled = barWidth // Cap at maximum width
+	}
+
+	// Build the bar string with 'x' for filled parts and spaces for empty parts
+	bar := "["
+	for i := 0; i < barWidth; i++ {
+		if i < filled {
+			bar += "▓"
+		} else {
+			bar += " "
+		}
+	}
+	bar += "]"
+
+	return bar
+}
+
 // renderMainContent creates the main body with the validator table in two columns
 func renderMainContent(m Model) string {
 	// Only initialize the table if we have committee data
@@ -127,10 +151,10 @@ func renderMainContent(m Model) string {
 		status := "❓"
 		uptimePercent := "N/A"
 		signedRatio := "N/A"
+		var uptime float64 = 0
 
 		if ok {
 			// Calculate uptime percentage
-			var uptime float64 = 0
 			if m.totalWithSig > 0 {
 				uptime = float64(stats.AttestedCount) / float64(m.totalWithSig)
 			}
@@ -151,8 +175,9 @@ func renderMainContent(m Model) string {
 		allRows = append(allRows, table.Row{
 			status,
 			validator.Name,
-			uptimePercent,
+			renderBar(uptime) + " " + uptimePercent,
 			signedRatio,
+			//renderBar(uptime),
 		})
 	}
 
@@ -169,8 +194,9 @@ func renderMainContent(m Model) string {
 	columns := []table.Column{
 		{Title: "Status", Width: 6},
 		{Title: "Validator", Width: 30},
-		{Title: "Uptime %", Width: 10},
+		{Title: "Signed %", Width: 30},
 		{Title: "Signed/Total", Width: 15},
+		//{Title: "Bar", Width: 30},
 	}
 
 	// Create left table
