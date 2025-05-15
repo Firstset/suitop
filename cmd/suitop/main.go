@@ -24,34 +24,109 @@ import (
 	rpcPb "suitop/pb/sui/rpc/v2beta"
 )
 
+var (
+	helpFlagVal        *bool
+	plainModeFlagVal   *bool
+	noAltScreenFlagVal *bool
+	logToFileFlagVal   *bool
+	logFilePathFlagVal *string
+	networkFlagVal     *string
+)
+
 func main() {
-	// Parse command line flags
-	plainMode := flag.Bool("plain", false, "Use plain text output instead of TUI")
-	noAltScreen := flag.Bool("no-alt-screen", false, "Run inside current terminal buffer (useful for tmux logs)")
-	logToFile := flag.Bool("log-to-file", false, "Write logs to a file")
-	logFilePath := flag.String("log-file", "./logs/suitop.log", "Path to log file (default: ./logs/suitop.log)")
+	// Define flags
+	helpFlagVal = flag.Bool("h", false, "Show help message")
+	// Bind -help to the same variable as -h for convenience
+	flag.BoolVar(helpFlagVal, "help", false, "Show help message (alias for -h)")
+	plainModeFlagVal = flag.Bool("plain", false, "Use plain text output (overrides PLAIN_MODE env var)")
+	noAltScreenFlagVal = flag.Bool("no-alt-screen", false, "Run inside current terminal buffer (overrides NO_ALT_SCREEN env var, useful for tmux logs)")
+	logToFileFlagVal = flag.Bool("log-to-file", false, "Write logs to a file (overrides LOG_TO_FILE env var)")
+	networkFlagVal = flag.String("network", "mainnet", "Network to connect to")
+	// Default for the flag variable itself. This is used if --log-file is not provided by the user.
+	// It's also used as a fallback for TUI mode if no other path is configured.
+	logFilePathFlagVal = flag.String("log-file", "./logs/suitop.log", "Path to log file (overrides LOG_FILE_PATH env var")
+
+	// Custom Usage function
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
+		fmt.Fprintf(flag.CommandLine.Output(), "Monitors validator uptime on the Sui network by subscribing to checkpoint data.\n\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "Flags:\n")
+		flag.PrintDefaults()
+	}
+
 	flag.Parse()
 
-	// Load configuration
+	// Handle -h or --help
+	if *helpFlagVal {
+		flag.Usage()
+		os.Exit(0)
+	}
+
+	// flag.Parse() calls os.Exit(2) after printing usage if an undefined flag is encountered.
+	// We check for remaining non-flag arguments.
+	if flag.NArg() > 0 {
+		fmt.Fprintf(os.Stderr, "Error: Unrecognized arguments: %v\n\n", flag.Args())
+		flag.Usage()
+		os.Exit(1) // Use a different exit code for unrecognized arguments vs. undefined flags
+	}
+
+	// Load configuration from environment variables and internal defaults
 	cfg := config.Load()
 
-	// Override config with command line flags if specified
-	if *plainMode {
-		cfg.UIConfig.PlainMode = true
-	} else {
-		cfg.UIConfig.PlainMode = false
-		// Always log to file and never to stderr
-		cfg.LogConfig.ToFile = true
-		cfg.LogConfig.ToStderr = false
+	// Override configuration with command-line flags if they were explicitly set
+	if flagWasSet("plain") {
+		cfg.UIConfig.PlainMode = *plainModeFlagVal
 	}
-	if *noAltScreen {
-		cfg.UIConfig.NoAltScreen = true
+	if flagWasSet("no-alt-screen") {
+		cfg.UIConfig.NoAltScreen = *noAltScreenFlagVal
 	}
-	if *logToFile {
-		cfg.LogConfig.ToFile = true
+	if flagWasSet("log-to-file") {
+		cfg.LogConfig.ToFile = *logToFileFlagVal
 	}
-	if *logFilePath != "" {
-		cfg.LogConfig.FilePath = *logFilePath
+	if flagWasSet("log-file") {
+		// If --log-file is explicitly set, its value (even if it's the flag's own default path) overrides cfg.
+		cfg.LogConfig.FilePath = *logFilePathFlagVal
+	}
+	// If --log-file was NOT set, cfg.LogConfig.FilePath retains the value from config.Load()
+	// (which is from LOG_FILE_PATH env var or config's internal default like ~/.suitop/logs/suitop.log).
+	// The flag's own default "./logs/suitop.log" (held in *logFilePathFlagVal if flag not set) is not automatically applied here yet.
+
+	// Special handling for TUI mode logging
+	if !cfg.UIConfig.PlainMode { // If current mode is TUI (after considering env vars and --plain flag)
+		cfg.LogConfig.ToFile = true    // Force logging to file for TUI
+		cfg.LogConfig.ToStderr = false // Don't log to stderr for TUI
+
+		// If LogFilePath is still considered empty or not meaningfully set for TUI mode,
+		// and TUI implies logging to file, ensure a path.
+		// A common convention is for config.Load() to provide a non-empty default.
+		// If LOG_FILE_PATH was set, cfg.LogConfig.FilePath has that.
+		// If --log-file was set, cfg.LogConfig.FilePath has that.
+		// If neither of those, and config.Load() resulted in an empty string (e.g. no env var and no internal default set by config.Load):
+		if cfg.LogConfig.FilePath == "" {
+			// Fallback to the default path defined for the --log-file flag itself.
+			cfg.LogConfig.FilePath = *logFilePathFlagVal // This is "./logs/suitop.log"
+		}
+	}
+
+	// Determine SuiNode and JSONRPCURL based on the network flag.
+	// This overrides SUI_NODE/SUI_JSON_RPC_URL from env vars or defaults in config.Load().
+	// The --network flag has a default of "mainnet", so *networkFlagVal will always be set.
+	switch *networkFlagVal {
+	case "mainnet":
+		cfg.SuiNode = "fullnode.mainnet.sui.io:443"
+		cfg.JSONRPCURL = "https://fullnode.mainnet.sui.io"
+		cfg.RPCClientConfig.URL = "https://fullnode.mainnet.sui.io"
+	case "testnet":
+		cfg.SuiNode = "fullnode.testnet.sui.io:443"
+		cfg.JSONRPCURL = "https://fullnode.testnet.sui.io"
+		cfg.RPCClientConfig.URL = "https://fullnode.testnet.sui.io"
+	case "devnet":
+		cfg.SuiNode = "fullnode.devnet.sui.io:443"
+		cfg.JSONRPCURL = "https://fullnode.devnet.sui.io"
+		cfg.RPCClientConfig.URL = "https://fullnode.devnet.sui.io"
+	default:
+		fmt.Fprintf(os.Stderr, "Error: Invalid --network value '%s'. Must be 'mainnet', 'testnet', or 'devnet'.\n", *networkFlagVal)
+		os.Exit(1)
 	}
 
 	// Setup logging
@@ -194,4 +269,16 @@ func main() {
 	}
 
 	log.Println("Application shut down.")
+}
+
+// flagWasSet checks if a flag was explicitly set on the command line.
+// It iterates over the flags that were visited (i.e., set).
+func flagWasSet(name string) bool {
+	wasSet := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			wasSet = true
+		}
+	})
+	return wasSet
 }
