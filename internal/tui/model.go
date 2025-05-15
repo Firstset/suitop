@@ -39,11 +39,15 @@ func New(epochID uint64, validators []types.ValidatorInfo) Model {
 		progress.WithDefaultGradient(),
 		progress.WithScaledGradient("#5fff87", "#48BB78"),
 	)
+	// Set percentage format to show one decimal place
+	validatorBar.PercentFormat = " %.1f%%"
 
 	votingPowerBar := progress.New(
 		progress.WithDefaultGradient(),
 		progress.WithScaledGradient("#ffdf5d", "#ECC94B"),
 	)
+	// Set percentage format to show one decimal place
+	votingPowerBar.PercentFormat = " %.1f%%"
 
 	return Model{
 		epoch:             epochID,

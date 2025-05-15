@@ -108,6 +108,6 @@ func AdjustStyles(total, left, right int) {
 
 	// Make the progress bar container narrower than its panel
 	// to account for borders, padding, and label text
-	progressBarWidth := halfWidth - 12
+	progressBarWidth := halfWidth - 14
 	progressBarStyle = progressBarStyle.Width(progressBarWidth)
 }

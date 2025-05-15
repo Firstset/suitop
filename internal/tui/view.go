@@ -85,13 +85,9 @@ func renderProgressPanel(m Model) string {
 		votingPercent = float64(m.signedVotingPower) / float64(m.totalVotingPower) * 100
 	}
 
-	// Format percentages with consistent width
-	valPercentStr := fmt.Sprintf("%d%%", int(validatorPercent))
-	votePercentStr := fmt.Sprintf("%d%%", int(votingPercent))
-
 	// Create compact labels
-	valLabel := fmt.Sprintf("✓ Validators: %s", valPercentStr)
-	voteLabel := fmt.Sprintf("🗳 Voting power: %s", votePercentStr)
+	valLabel := fmt.Sprintf("✓ Validators:")
+	voteLabel := fmt.Sprintf("🗳 Voting power:")
 
 	// Render the progress bars with the calculated percentages
 	validatorContent := m.validatorBar.ViewAs(validatorPercent / 100) // ViewAs expects 0.0-1.0
@@ -109,7 +105,6 @@ func renderProgressPanel(m Model) string {
 	return progressPanelStyle.Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
-			"SUI Network Status",
 			content,
 		),
 	)
