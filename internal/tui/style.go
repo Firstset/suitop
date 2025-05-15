@@ -108,7 +108,7 @@ func AdjustStyles(total, left, middle, right int) {
 
 	// Set width for the new main content container
 	// It spans the full available width, accounting for its own padding/border.
-	mainContentContainerStyle = mainContentContainerStyle.Width(total - 4)
+	mainContentContainerStyle = mainContentContainerStyle.Width(total - 2)
 	// Height for mainContentContainerStyle will be determined by its content (the tables).
 
 	// Make header panels same height and width
