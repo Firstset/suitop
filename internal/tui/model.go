@@ -24,6 +24,7 @@ type Model struct {
 	height                             int // Terminal height
 	ready                              bool
 	leftWidth, rightWidth, middleWidth int
+	NetworkName                        string // Added to display the current network
 
 	// Calculated fields for progress bars
 	signedValidators  int
@@ -33,7 +34,7 @@ type Model struct {
 }
 
 // New creates a new bubble tea model
-func New(epochID uint64, validators []types.ValidatorInfo) Model {
+func New(epochID uint64, validators []types.ValidatorInfo, networkName string) Model {
 	// Create progress bars with different colors
 	validatorBar := progress.New(
 		progress.WithDefaultGradient(),
@@ -63,6 +64,7 @@ func New(epochID uint64, validators []types.ValidatorInfo) Model {
 		signedValidators:  0,
 		totalVotingPower:  0,
 		signedVotingPower: 0,
+		NetworkName:       networkName,
 	}
 }
 
