@@ -30,10 +30,13 @@ var (
 			BorderForeground(primaryColor).
 			Padding(1, 2)
 
-	// Panel styles for the split layout
+	// Panel styles for the split layout (individual table panels - will be deprecated for main content)
 	leftPanelStyle   = boxStyle.Copy()
 	middlePanelStyle = boxStyle.Copy()
 	rightPanelStyle  = boxStyle.Copy()
+
+	// Style for the single container for all main content tables
+	mainContentContainerStyle = boxStyle.Copy()
 
 	// Header panel styles
 	headerBoxStyle = boxStyle.Copy().
@@ -91,25 +94,33 @@ func AdjustStyles(total, left, middle, right int) {
 
 	// Adjust boxes
 	boxWidth := total - 4
-	//boxStyle = boxStyle.Width(boxWidth / 2)
+	//boxStyle = boxStyle.Width(boxWidth / 2) // This was commented out, keep as is.
 	infoBoxStyle = infoBoxStyle.Width(boxWidth / 2)
 
-	// Set both panels to same height and width
-	height := 8
-	leftPanelStyle = leftPanelStyle.Width(left).Height(height)
-	middlePanelStyle = middlePanelStyle.Width(middle).Height(height)
-	rightPanelStyle = rightPanelStyle.Width(right).Height(height)
+	// Height for header panels
+	headerPanelsHeight := 8 // As previously used
+
+	// These individual panel styles are no longer having their dimensions set here,
+	// as the main content tables will be in one shared container.
+	// leftPanelStyle = leftPanelStyle.Width(left).Height(headerPanelsHeight)
+	// middlePanelStyle = middlePanelStyle.Width(middle).Height(headerPanelsHeight)
+	// rightPanelStyle = rightPanelStyle.Width(right).Height(headerPanelsHeight)
+
+	// Set width for the new main content container
+	// It spans the full available width, accounting for its own padding/border.
+	mainContentContainerStyle = mainContentContainerStyle.Width(total - 4)
+	// Height for mainContentContainerStyle will be determined by its content (the tables).
 
 	// Make header panels same height and width
-	//headerBoxStyle = headerBoxStyle.Width(total).Height(height)
-	infoPanelStyle = infoPanelStyle.Width(boxWidth / 2).Height(height)
-	progressPanelStyle = progressPanelStyle.Width(boxWidth / 2).Height(height)
+	//headerBoxStyle = headerBoxStyle.Width(total).Height(headerPanelsHeight) // This was commented out
+	infoPanelStyle = infoPanelStyle.Width(boxWidth / 2).Height(headerPanelsHeight)
+	progressPanelStyle = progressPanelStyle.Width(boxWidth / 2).Height(headerPanelsHeight)
 
 	// Make the progress bar container narrower than its panel
 	// to account for borders, padding, and label text.
 	// The progress.Model's Width will be set in the Model.Update based on this.
 	// validatorBarStyle and votingPowerBarStyle are for the bar's visual style (colors), not its width.
 	// Remove Width(total) from these as it's incorrect.
-	// validatorBarStyle = validatorBarStyle.Width(total)
-	// votingPowerBarStyle = votingPowerBarStyle.Width(total)
+	// validatorBarStyle = validatorBarStyle.Width(total) // Already commented out
+	// votingPowerBarStyle = votingPowerBarStyle.Width(total) // Already commented out
 }

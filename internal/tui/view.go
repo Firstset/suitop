@@ -140,7 +140,7 @@ func renderBar(uptime float64) string {
 func renderMainContent(m Model) string {
 	// Only initialize the table if we have committee data
 	if m.committee == nil || len(m.committee) == 0 {
-		return boxStyle.Render("Waiting for validator data...")
+		return mainContentContainerStyle.Render("Waiting for validator data...")
 	}
 
 	// Build all validator rows
@@ -216,28 +216,34 @@ func renderMainContent(m Model) string {
 		//{Title: "Bar", Width: 30},
 	}
 
+	// Calculate height for tables inside the container.
+	// The container (mainContentContainerStyle) is a copy of boxStyle, which has Padding(1,2).
+	// This means 1 line top padding and 1 line bottom padding.
+	// So, tables should be 2 lines shorter than before to fit inside.
+	tableHeight := m.height - 14 - 2
+
 	// Create left table
 	leftTable := table.New(
 		table.WithColumns(columns),
 		table.WithRows(leftRows),
-		table.WithHeight(m.height-14), // Adjust height to fit in screen (14 fits exactly right now)
+		table.WithHeight(tableHeight),
 	)
 
 	// Create middle table
 	middleTable := table.New(
 		table.WithColumns(columns),
 		table.WithRows(middleRows),
-		table.WithHeight(m.height-14), // Adjust height to fit in screen (14 fits exactly right now)
+		table.WithHeight(tableHeight),
 	)
 
 	// Create right table
 	rightTable := table.New(
 		table.WithColumns(columns),
 		table.WithRows(rightRows),
-		table.WithHeight(m.height-14), // Adjust height to fit in screen (14 fits exactly right now)
+		table.WithHeight(tableHeight),
 	)
 
-	// Style both tables
+	// Style tables (internal styling)
 	leftTable.SetStyles(table.Styles{
 		Header: tableHeaderStyle,
 		Cell:   tableCellStyle,
@@ -253,18 +259,23 @@ func renderMainContent(m Model) string {
 		Cell:   tableCellStyle,
 	})
 
-	// Render left and right tables
-	leftTableView := leftPanelStyle.Render(leftTable.View())
-	middleTableView := middlePanelStyle.Render(middleTable.View()) // Assuming middlePanelStyle exists or is similar to left/rightPanelStyle
-	rightTableView := rightPanelStyle.Render(rightTable.View())
+	// Get raw string views of the tables
+	leftTableView := leftTable.View()
+	middleTableView := middleTable.View()
+	rightTableView := rightTable.View()
 
-	// Join tables horizontally
-	return lipgloss.JoinHorizontal(
+	// Join table views horizontally with a single space separator
+	joinedTablesView := lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		leftTableView,
+		" ", // Spacer
 		middleTableView,
+		" ", // Spacer
 		rightTableView,
 	)
+
+	// Render the joined tables inside the single main container
+	return mainContentContainerStyle.Render(joinedTablesView)
 }
 
 // countSignaturesForCheckpoint counts how many validators have signed the current checkpoint
