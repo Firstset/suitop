@@ -11,25 +11,17 @@ import (
 
 // View renders the current model as a string
 func (m Model) View() string {
-	// Check if we have a valid window size yet
 	if !m.ready {
 		return "Initializing..."
 	}
 
-	// Adjust styles based on terminal size
 	AdjustStyles(m.width, m.leftWidth, m.rightWidth)
 
-	// Build the view components
 	headerRow := renderHeaderRow(m)
 	mainContent := renderMainContent(m)
 
-	// Add top margin to show the header border
-	topMargin := "\n\n\n\n"
-
-	// Combine all sections with top margin
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
-		topMargin,
 		headerRow,
 		mainContent,
 	)
@@ -190,14 +182,14 @@ func renderMainContent(m Model) string {
 	leftTable := table.New(
 		table.WithColumns(columns),
 		table.WithRows(leftRows),
-		table.WithHeight(m.height-13), // Adjust height to fit in screen
+		table.WithHeight(m.height-14), // Adjust height to fit in screen (14 fits exactly right now)
 	)
 
 	// Create right table
 	rightTable := table.New(
 		table.WithColumns(columns),
 		table.WithRows(rightRows),
-		table.WithHeight(m.height-13), // Adjust height to fit in screen
+		table.WithHeight(m.height-14), // Adjust height to fit in screen (14 fits exactly right now)
 	)
 
 	// Style both tables
