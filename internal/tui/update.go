@@ -22,23 +22,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 
-		gap := 4                          // 1‑char gap between panels + border rounding
-		m.leftWidth = (m.width - gap) / 2 // integer division -> left column
-		m.rightWidth = m.width - m.leftWidth - gap
+		gap := 2                      // 1‑char gap between panels + border rounding
+		m.leftWidth = m.width/3 - gap // integer division -> left column for main content
+		m.rightWidth = m.leftWidth    // for main content
+		m.middleWidth = m.leftWidth   // for main content
 
 		interior := func(boxWidth int) int {
-			border := 2 // lipgloss border adds 2 chars
-			pad := 4    // we use Padding(1,2) → left+right = 4
+			border := 2 // lipgloss border adds 2 chars (1 left, 1 right for RoundedBorder)
+			pad := 4    // Padding(1,2) means 2 units on left and 2 on right for content = 4
 			return boxWidth - border - pad
 		}
 
-		barWidth := interior(m.rightWidth)
+		// Calculate width for progress bars. They are in progressPanelStyle.
+		// progressPanelStyle gets width (m.width - 4) / 2 from AdjustStyles.
+		progressPanelHostWidth := (m.width - 4) / 2
+		barWidth := interior(progressPanelHostWidth)
 
 		m.validatorBar.Width = barWidth
 		m.votingPowerBar.Width = barWidth
 
 		// update style widths
-		AdjustStyles(m.width, m.leftWidth, m.rightWidth)
+		AdjustStyles(m.width, m.leftWidth, m.middleWidth, m.rightWidth)
 
 		m.ready = true
 

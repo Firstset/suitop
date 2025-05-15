@@ -15,7 +15,7 @@ func (m Model) View() string {
 		return "Initializing..."
 	}
 
-	AdjustStyles(m.width, m.leftWidth, m.rightWidth)
+	AdjustStyles(m.width, m.leftWidth, m.middleWidth, m.rightWidth)
 
 	headerRow := renderHeaderRow(m)
 	mainContent := renderMainContent(m)
@@ -188,9 +188,24 @@ func renderMainContent(m Model) string {
 		return allRows[i][1] < allRows[j][1]
 	})
 
-	// Split rows into two groups for two columns
-	leftRows := allRows[:len(allRows)/2]
-	rightRows := allRows[len(allRows)/2:]
+	// Split rows into three groups for three columns
+	totalRows := len(allRows)
+	rowsPerColumn := totalRows / 3
+	remainder := totalRows % 3
+
+	leftRows := allRows[:rowsPerColumn]
+	middleRows := allRows[rowsPerColumn : 2*rowsPerColumn]
+	rightRows := allRows[2*rowsPerColumn:]
+
+	// Adjust for remainder
+	if remainder == 1 {
+		rightRows = allRows[2*rowsPerColumn+1:]
+		middleRows = allRows[rowsPerColumn : 2*rowsPerColumn+1]
+	} else if remainder == 2 {
+		rightRows = allRows[2*rowsPerColumn+2:]
+		middleRows = allRows[rowsPerColumn : 2*rowsPerColumn+1]
+		leftRows = allRows[:rowsPerColumn+1]
+	}
 
 	// Table columns definition
 	columns := []table.Column{
@@ -208,6 +223,13 @@ func renderMainContent(m Model) string {
 		table.WithHeight(m.height-14), // Adjust height to fit in screen (14 fits exactly right now)
 	)
 
+	// Create middle table
+	middleTable := table.New(
+		table.WithColumns(columns),
+		table.WithRows(middleRows),
+		table.WithHeight(m.height-14), // Adjust height to fit in screen (14 fits exactly right now)
+	)
+
 	// Create right table
 	rightTable := table.New(
 		table.WithColumns(columns),
@@ -221,6 +243,11 @@ func renderMainContent(m Model) string {
 		Cell:   tableCellStyle,
 	})
 
+	middleTable.SetStyles(table.Styles{
+		Header: tableHeaderStyle,
+		Cell:   tableCellStyle,
+	})
+
 	rightTable.SetStyles(table.Styles{
 		Header: tableHeaderStyle,
 		Cell:   tableCellStyle,
@@ -228,12 +255,14 @@ func renderMainContent(m Model) string {
 
 	// Render left and right tables
 	leftTableView := leftPanelStyle.Render(leftTable.View())
+	middleTableView := middlePanelStyle.Render(middleTable.View()) // Assuming middlePanelStyle exists or is similar to left/rightPanelStyle
 	rightTableView := rightPanelStyle.Render(rightTable.View())
 
 	// Join tables horizontally
 	return lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		leftTableView,
+		middleTableView,
 		rightTableView,
 	)
 }

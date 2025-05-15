@@ -9,21 +9,21 @@ import (
 
 // Model represents the UI state
 type Model struct {
-	epoch                 uint64
-	checkpointSeq         uint64
-	totalWithSig          uint64
-	signedPower           int
-	totalPower            int
-	committee             []types.ValidatorInfo
-	stats                 map[string]types.ValidatorStats
-	validatorBar          progress.Model
-	votingPowerBar        progress.Model
-	checkpoints           map[uint64]types.CheckpointInfo
-	latestSeq             uint64
-	width                 int // Terminal width
-	height                int // Terminal height
-	ready                 bool
-	leftWidth, rightWidth int
+	epoch                              uint64
+	checkpointSeq                      uint64
+	totalWithSig                       uint64
+	signedPower                        int
+	totalPower                         int
+	committee                          []types.ValidatorInfo
+	stats                              map[string]types.ValidatorStats
+	validatorBar                       progress.Model
+	votingPowerBar                     progress.Model
+	checkpoints                        map[uint64]types.CheckpointInfo
+	latestSeq                          uint64
+	width                              int // Terminal width
+	height                             int // Terminal height
+	ready                              bool
+	leftWidth, rightWidth, middleWidth int
 
 	// Calculated fields for progress bars
 	signedValidators  int

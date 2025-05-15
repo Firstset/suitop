@@ -31,8 +31,9 @@ var (
 			Padding(1, 2)
 
 	// Panel styles for the split layout
-	leftPanelStyle  = boxStyle.Copy()
-	rightPanelStyle = boxStyle.Copy()
+	leftPanelStyle   = boxStyle.Copy()
+	middlePanelStyle = boxStyle.Copy()
+	rightPanelStyle  = boxStyle.Copy()
 
 	// Header panel styles
 	headerBoxStyle = boxStyle.Copy().
@@ -44,8 +45,8 @@ var (
 			BorderForeground(primaryColor)
 
 	// Info box style
-	infoBoxStyle = boxStyle.Copy().
-			Width(40)
+	infoBoxStyle = boxStyle.Copy()
+	//.Width(40)
 
 	// Progress bar container style
 	progressBarStyle = lipgloss.NewStyle().
@@ -75,8 +76,8 @@ var (
 			Foreground(warningColor)
 
 	// Progress bar style variants
-	validatorBarStyle = lipgloss.NewStyle().Foreground(validatorBarColor)
-	powerBarStyle     = lipgloss.NewStyle().Foreground(powerBarColor)
+	validatorBarStyle   = lipgloss.NewStyle().Foreground(validatorBarColor)
+	votingPowerBarStyle = lipgloss.NewStyle().Foreground(powerBarColor)
 
 	// Progress bars panel style
 	progressPanelStyle = boxStyle.Copy().
@@ -84,30 +85,31 @@ var (
 )
 
 // AdjustStyles updates style widths based on terminal dimensions
-func AdjustStyles(total, left, right int) {
+func AdjustStyles(total, left, middle, right int) {
 	// Adjust header to full width
 	headerStyle = headerStyle.Width(total - 4)
 
 	// Adjust boxes
 	boxWidth := total - 4
-	boxStyle = boxStyle.Width(boxWidth)
+	//boxStyle = boxStyle.Width(boxWidth / 2)
 	infoBoxStyle = infoBoxStyle.Width(boxWidth / 2)
-
-	// Calculate panel widths accounting for borders and padding
-	halfWidth := (total / 2) - 3 // Account for padding and borders
 
 	// Set both panels to same height and width
 	height := 8
 	leftPanelStyle = leftPanelStyle.Width(left).Height(height)
+	middlePanelStyle = middlePanelStyle.Width(middle).Height(height)
 	rightPanelStyle = rightPanelStyle.Width(right).Height(height)
 
 	// Make header panels same height and width
-	headerBoxStyle = headerBoxStyle.Width(total).Height(height)
-	infoPanelStyle = infoPanelStyle.Width(left).Height(height)
-	progressPanelStyle = progressPanelStyle.Width(right).Height(height)
+	//headerBoxStyle = headerBoxStyle.Width(total).Height(height)
+	infoPanelStyle = infoPanelStyle.Width(boxWidth / 2).Height(height)
+	progressPanelStyle = progressPanelStyle.Width(boxWidth / 2).Height(height)
 
 	// Make the progress bar container narrower than its panel
-	// to account for borders, padding, and label text
-	progressBarWidth := halfWidth - 14
-	progressBarStyle = progressBarStyle.Width(progressBarWidth)
+	// to account for borders, padding, and label text.
+	// The progress.Model's Width will be set in the Model.Update based on this.
+	// validatorBarStyle and votingPowerBarStyle are for the bar's visual style (colors), not its width.
+	// Remove Width(total) from these as it's incorrect.
+	// validatorBarStyle = validatorBarStyle.Width(total)
+	// votingPowerBarStyle = votingPowerBarStyle.Width(total)
 }
