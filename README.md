@@ -1,4 +1,4 @@
-# Sui Uptime Monitor
+# `suitop` - Sui Uptime Monitor
 
 Monitors validator uptime on the Sui network by subscribing to checkpoint data. Features a modern terminal user interface (TUI) with real-time updates.
 
@@ -53,6 +53,9 @@ go build -ldflags "-X suitop/internal/version.GitCommit=$(git rev-parse HEAD) -X
 ```bash
 # Run with default TUI mode
 ./suitop
+
+# Run for testnet
+./suitop --network testnet
 
 # Run with plain text output
 ./suitop --plain
