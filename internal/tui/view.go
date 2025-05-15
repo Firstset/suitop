@@ -210,8 +210,8 @@ func renderMainContent(m Model) string {
 	// Table columns definition
 	columns := []table.Column{
 		{Title: "Status", Width: 6},
-		{Title: "Validator", Width: 25},
-		{Title: "Signed %", Width: 25},
+		{Title: "Validator", Width: 20},
+		{Title: "Signed %", Width: 20},
 		//{Title: "Signed/Total", Width: 15},
 		//{Title: "Bar", Width: 30},
 	}
