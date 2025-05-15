@@ -49,6 +49,7 @@ func renderInfoPanel(m Model) string {
 	epochInfo := fmt.Sprintf("Epoch: %d", m.epoch)
 	checkpointInfo := fmt.Sprintf("Checkpoint: %d", m.checkpointSeq)
 	committeeSize := fmt.Sprintf("Committee Size: %d validators", len(m.committee))
+	totalCheckpoints := fmt.Sprintf("Checkpoint samples: %d", m.totalWithSig)
 
 	// Format time
 	currentTime := time.Now().Format("2006-01-02 15:04:05")
@@ -59,6 +60,7 @@ func renderInfoPanel(m Model) string {
 		lipgloss.Left,
 		epochInfo,
 		checkpointInfo,
+		totalCheckpoints,
 		committeeSize,
 		timeInfo,
 	)
@@ -150,7 +152,7 @@ func renderMainContent(m Model) string {
 		// Default values if stats not found
 		status := "❓"
 		uptimePercent := "N/A"
-		signedRatio := "N/A"
+		//signedRatio := "N/A"
 		var uptime float64 = 0
 
 		if ok {
@@ -161,7 +163,7 @@ func renderMainContent(m Model) string {
 			uptimePercent = fmt.Sprintf("%.2f%%", uptime*100)
 
 			// Format signed ratio
-			signedRatio = fmt.Sprintf("%d/%d", stats.AttestedCount, m.totalWithSig)
+			//signedRatio = fmt.Sprintf("%d/%d", stats.AttestedCount, m.totalWithSig)
 
 			// Set status emoji based on signature presence for current checkpoint
 			if stats.SignedCurrent {
@@ -176,7 +178,7 @@ func renderMainContent(m Model) string {
 			status,
 			validator.Name,
 			renderBar(uptime) + " " + uptimePercent,
-			signedRatio,
+			//signedRatio,
 			//renderBar(uptime),
 		})
 	}
@@ -193,9 +195,9 @@ func renderMainContent(m Model) string {
 	// Table columns definition
 	columns := []table.Column{
 		{Title: "Status", Width: 6},
-		{Title: "Validator", Width: 30},
-		{Title: "Signed %", Width: 30},
-		{Title: "Signed/Total", Width: 15},
+		{Title: "Validator", Width: 25},
+		{Title: "Signed %", Width: 25},
+		//{Title: "Signed/Total", Width: 15},
 		//{Title: "Bar", Width: 30},
 	}
 
