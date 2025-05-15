@@ -2,6 +2,8 @@
 
 Monitors validator uptime on the Sui network by subscribing to checkpoint data. Features a modern terminal user interface (TUI) with real-time updates.
 
+![Suitop Screenshot](./screenshot.png)
+
 ## Features
 
 - Real-time monitoring of validator signatures on checkpoints

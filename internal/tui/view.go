@@ -221,7 +221,7 @@ func renderMainContent(m Model) string {
 	// The container (mainContentContainerStyle) is a copy of boxStyle, which has Padding(1,2).
 	// This means 1 line top padding and 1 line bottom padding.
 	// So, tables should be 2 lines shorter than before to fit inside.
-	tableHeight := m.height - 14 - 2
+	tableHeight := m.height - 14
 
 	// Create left table
 	leftTable := table.New(
