@@ -225,7 +225,7 @@ func main() {
 		}
 
 		// Initialize the Bubble Tea model
-		model := tui.New(initialEpoch, committeeForUI)
+		model := tui.New(initialEpoch, committeeForUI, *networkFlagVal)
 
 		// Program options based on config
 		programOpts := []tea.ProgramOption{

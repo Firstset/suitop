@@ -46,6 +46,7 @@ func renderHeaderRow(m Model) string {
 // renderInfoPanel creates the info panel with epoch, checkpoint, and stats
 func renderInfoPanel(m Model) string {
 	// Format the basic information
+	networkInfo := fmt.Sprintf("Network: %s", m.NetworkName)
 	epochInfo := fmt.Sprintf("Epoch: %d", m.epoch)
 	checkpointInfo := fmt.Sprintf("Checkpoint: %d", m.checkpointSeq)
 	committeeSize := fmt.Sprintf("Committee Size: %d validators", len(m.committee))
@@ -58,6 +59,7 @@ func renderInfoPanel(m Model) string {
 	// Join vertically
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
+		networkInfo,
 		epochInfo,
 		checkpointInfo,
 		totalCheckpoints,
@@ -68,7 +70,6 @@ func renderInfoPanel(m Model) string {
 	return infoPanelStyle.Render(
 		lipgloss.JoinVertical(
 			lipgloss.Left,
-			"SUI Network Statistics",
 			content,
 		),
 	)
