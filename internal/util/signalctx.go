@@ -2,32 +2,30 @@ package util
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
 )
 
-// SetupSignalHandler registers for SIGINT and SIGTERM and calls the cancel func when a signal is received.
-// It returns a function that can be called to stop the signal handler goroutine (e.g. on clean shutdown).
+// SetupSignalHandler sets up a signal handler that cancels the context when an interrupt is received.
+// Returns a cleanup function that should be deferred by the caller.
 func SetupSignalHandler(cancel context.CancelFunc) func() {
+	// Handle OS signals for graceful shutdown
 	sigs := make(chan os.Signal, 1)
-	done := make(chan struct{}, 1)
-
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	stopChan := make(chan struct{})
 
 	go func() {
-		select {
-		case sig := <-sigs:
-			fmt.Printf("\nReceived signal: %s, shutting down gracefully...\n", sig)
-			cancel()
-		case <-done:
-			// Clean exit for the goroutine
-		}
+		sig := <-sigs
+		log.Printf("Received signal: %s, shutting down gracefully...", sig)
+		cancel()
+		close(stopChan)
 	}()
 
 	return func() {
-		signal.Stop(sigs) // Unregister signal notifications
-		close(done)       // Signal the goroutine to exit
+		signal.Stop(sigs)
+		close(sigs)
+		<-stopChan // Wait for the signal handler to complete if possible
 	}
 }

@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 )
@@ -15,6 +16,8 @@ type Config struct {
 	GRPCSubscriberConfig GRPCSubscriberConfig // Renamed for clarity
 	ProcessorConfig      ProcessorConfig      // Placeholder for processor specific configs
 	RPCClientConfig      RPCClientConfig      // For RPC client settings passed to validator.Loader
+	UIConfig             UIConfig             // For UI related settings
+	LogConfig            LogConfig            // For logging configuration
 }
 
 // GRPCConfig holds gRPC specific settings.
@@ -36,10 +39,24 @@ type ProcessorConfig struct {
 }
 
 // RPCClientConfig holds settings for the JSON-RPC client.
-// type RPCClientConfig struct { // Original problematic line, comment out or delete
-type RPCClientConfig struct { // Corrected line
+type RPCClientConfig struct {
 	URL     string
 	Timeout time.Duration
+}
+
+// UIConfig contains settings for the user interface
+type UIConfig struct {
+	PlainMode   bool // When true, use command-line output instead of TUI
+	NoAltScreen bool // When true, run inside current terminal buffer (useful for tmux logs)
+}
+
+// LogConfig holds settings for logging
+type LogConfig struct {
+	ToStderr  bool   // Whether to log to stderr
+	ToFile    bool   // Whether to log to a file
+	FilePath  string // Path to log file
+	WithTime  bool   // Include timestamps in logs
+	WithLevel bool   // Include log levels in messages
 }
 
 // Load populates Config from environment variables or defaults.
@@ -79,6 +96,38 @@ func Load() *Config {
 		subscriberRetryDelayMs = 1000 // Default to 1 second
 	}
 
+	// UI Config settings
+	plainModeStr := os.Getenv("PLAIN_MODE")
+	plainMode := false // Default to TUI mode
+	if plainModeStr == "true" {
+		plainMode = true
+	}
+
+	noAltScreenStr := os.Getenv("NO_ALT_SCREEN")
+	noAltScreen := false // Default to using alt screen
+	if noAltScreenStr == "true" {
+		noAltScreen = true
+	}
+
+	// Log Config settings
+	logToFileStr := os.Getenv("LOG_TO_FILE")
+	logToFile := false
+	if logToFileStr == "true" {
+		logToFile = true
+	}
+
+	logFilePath := os.Getenv("LOG_FILE_PATH")
+	if logFilePath == "" {
+		// Default log file in user's home directory
+		home, err := os.UserHomeDir()
+		if err == nil {
+			logFilePath = filepath.Join(home, ".suitop", "logs", "suitop.log")
+		} else {
+			// Fallback to current directory if home not found
+			logFilePath = "suitop.log"
+		}
+	}
+
 	return &Config{
 		SuiNode:           suiNode,
 		JSONRPCURL:        jsonRPCURL,
@@ -94,6 +143,17 @@ func Load() *Config {
 		RPCClientConfig: RPCClientConfig{
 			URL:     jsonRPCURL,
 			Timeout: time.Duration(defaultRPCTimeoutSeconds) * time.Second,
+		},
+		UIConfig: UIConfig{
+			PlainMode:   plainMode,
+			NoAltScreen: noAltScreen,
+		},
+		LogConfig: LogConfig{
+			ToStderr:  true,      // Always log to stderr
+			ToFile:    logToFile, // Optionally log to file
+			FilePath:  logFilePath,
+			WithTime:  true,
+			WithLevel: true,
 		},
 	}
 }
