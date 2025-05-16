@@ -62,14 +62,7 @@ type LogConfig struct {
 // Load populates Config from environment variables or defaults.
 func Load() *Config {
 	suiNode := os.Getenv("SUI_NODE")
-	if suiNode == "" {
-		suiNode = "fullnode.mainnet.sui.io:443" // Default gRPC node
-	}
-
 	jsonRPCURL := os.Getenv("SUI_JSON_RPC_URL")
-	if jsonRPCURL == "" {
-		jsonRPCURL = "https://fullnode.mainnet.sui.io" // Default JSON-RPC endpoint
-	}
 
 	defaultRPCTimeoutStr := os.Getenv("DEFAULT_RPC_TIMEOUT_SECONDS")
 	defaultRPCTimeoutSeconds, err := strconv.Atoi(defaultRPCTimeoutStr)

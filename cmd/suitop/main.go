@@ -108,26 +108,43 @@ func main() {
 		}
 	}
 
-	// Determine SuiNode and JSONRPCURL based on the network flag.
-	// This overrides SUI_NODE/SUI_JSON_RPC_URL from env vars or defaults in config.Load().
-	// The --network flag has a default of "mainnet", so *networkFlagVal will always be set.
-	switch *networkFlagVal {
-	case "mainnet":
-		cfg.SuiNode = "fullnode.mainnet.sui.io:443"
-		cfg.JSONRPCURL = "https://fullnode.mainnet.sui.io"
-		cfg.RPCClientConfig.URL = "https://fullnode.mainnet.sui.io"
-	case "testnet":
-		cfg.SuiNode = "fullnode.testnet.sui.io:443"
-		cfg.JSONRPCURL = "https://fullnode.testnet.sui.io"
-		cfg.RPCClientConfig.URL = "https://fullnode.testnet.sui.io"
-	case "devnet":
-		cfg.SuiNode = "fullnode.devnet.sui.io:443"
-		cfg.JSONRPCURL = "https://fullnode.devnet.sui.io"
-		cfg.RPCClientConfig.URL = "https://fullnode.devnet.sui.io"
-	default:
-		fmt.Fprintf(os.Stderr, "Error: Invalid --network value '%s'. Must be 'mainnet', 'testnet', or 'devnet'.\n", *networkFlagVal)
-		os.Exit(1)
+	// Default SuiNode if not provided by env
+	if cfg.SuiNode == "" {
+		switch *networkFlagVal {
+		case "mainnet":
+			cfg.SuiNode = "fullnode.mainnet.sui.io:443"
+		case "testnet":
+			cfg.SuiNode = "fullnode.testnet.sui.io:443"
+		case "devnet":
+			cfg.SuiNode = "fullnode.devnet.sui.io:443"
+		default:
+			fmt.Fprintf(os.Stderr, "Error: Invalid --network value '%s' for SuiNode. Must be 'mainnet', 'testnet', or 'devnet'.\n", *networkFlagVal)
+			os.Exit(1)
+		}
 	}
+
+	// Default JSONRPCURL and RPCClientConfig.URL if JSONRPCURL not provided by env.
+	// config.Load() initializes cfg.RPCClientConfig.URL from the SUI_JSON_RPC_URL env variable.
+	// If SUI_JSON_RPC_URL was set, cfg.RPCClientConfig.URL is already correct.
+	// If SUI_JSON_RPC_URL was not set (so cfg.JSONRPCURL is ""), we set both here from network defaults.
+	if cfg.JSONRPCURL == "" {
+		switch *networkFlagVal {
+		case "mainnet":
+			cfg.JSONRPCURL = "https://fullnode.mainnet.sui.io"
+			cfg.RPCClientConfig.URL = "https://fullnode.mainnet.sui.io"
+		case "testnet":
+			cfg.JSONRPCURL = "https://fullnode.testnet.sui.io"
+			cfg.RPCClientConfig.URL = "https://fullnode.testnet.sui.io"
+		case "devnet":
+			cfg.JSONRPCURL = "https://fullnode.devnet.sui.io"
+			cfg.RPCClientConfig.URL = "https://fullnode.devnet.sui.io"
+		default:
+			fmt.Fprintf(os.Stderr, "Error: Invalid --network value '%s' for JSONRPCURL. Must be 'mainnet', 'testnet', or 'devnet'.\n", *networkFlagVal)
+			os.Exit(1)
+		}
+	}
+	// If cfg.JSONRPCURL was set from an environment variable, config.Load() already ensured
+	// cfg.RPCClientConfig.URL matches it, so no 'else' block is needed here for RPCClientConfig.URL.
 
 	// Setup logging
 	logCleanup, err := util.SetupLogging(util.LogConfig{
