@@ -73,6 +73,43 @@ go build -ldflags "-X suitop/internal/version.GitCommit=$(git rev-parse HEAD) -X
 ./suitop --generate-dataset
 ```
 
+## Dataset Mode
+
+When `--generate-dataset` (or `GENERATE_DATASET=true`) is enabled the tool runs
+in plain mode and keeps validator signatures in memory until you press `q` then
+`Enter`.
+
+Every epoch is flushed to a JSON file inside `DATASET_FOLDER` (defaults to
+`./data`).  Files are named `epoch_<epoch>_<start>-<end>.json` where `<start>` and
+`<end>` are the first and last checkpoint sequence numbers recorded.
+
+The JSON structure contains an array of validators with a bitmap of all
+checkpoints in order:
+
+```json
+{
+  "epoch": 42,
+  "start_checkpoint": 10000,
+  "end_checkpoint": 10100,
+  "validators": [
+    {
+      "name": "Validator A",
+      "address": "0x...",
+      "signed": 90,
+      "total": 101,
+      "bitmap": "...base64 bytes..."
+    }
+  ]
+}
+```
+
+The `bitmap` field is base64‑encoded.  When decoded, each bit corresponds to a
+checkpoint starting from the least significant bit of the first byte.  A set bit
+(value `1`) means the validator signed that checkpoint.
+
+Progress is printed every 10 checkpoints with a reminder that you can press `q`
+to finish recording.
+
 ## Usage
 
 - Press `q` or `Ctrl+C` to quit the application
