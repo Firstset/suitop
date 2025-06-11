@@ -27,6 +27,8 @@ The application can be configured using environment variables:
 - `NO_ALT_SCREEN`: Set to `true` to run inside current terminal buffer (default: `false`).
 - `LOG_TO_FILE`: Set to `true` to write logs to a file (default: `false`).
 - `LOG_FILE_PATH`: Path to log file (default: `~/.suitop/logs/suitop.log`).
+- `GENERATE_DATASET`: Enable dataset generation mode (default: `false`).
+- `DATASET_FOLDER`: Folder to store dataset files (default: `./data`).
 
 ## Command-line Flags
 
@@ -36,6 +38,7 @@ These flags override the corresponding environment variables:
 - `--no-alt-screen`: Run inside current terminal buffer (useful for tmux logs)
 - `--log-to-file`: Write logs to a file
 - `--log-file [path]`: Path to log file
+- `--generate-dataset`: Enable dataset generation mode
 
 ## Building
 
@@ -65,6 +68,9 @@ go build -ldflags "-X suitop/internal/version.GitCommit=$(git rev-parse HEAD) -X
 
 # Run with logging to a file
 ./suitop --log-to-file --log-file /path/to/logfile.log
+
+# Generate dataset in plain mode
+./suitop --generate-dataset
 ```
 
 ## Usage

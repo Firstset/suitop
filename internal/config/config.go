@@ -18,6 +18,7 @@ type Config struct {
 	RPCClientConfig      RPCClientConfig      // For RPC client settings passed to validator.Loader
 	UIConfig             UIConfig             // For UI related settings
 	LogConfig            LogConfig            // For logging configuration
+	DatasetConfig        DatasetConfig        // For dataset generation
 }
 
 // GRPCConfig holds gRPC specific settings.
@@ -57,6 +58,11 @@ type LogConfig struct {
 	FilePath  string // Path to log file
 	WithTime  bool   // Include timestamps in logs
 	WithLevel bool   // Include log levels in messages
+}
+
+type DatasetConfig struct {
+	Generate bool
+	Folder   string
 }
 
 // Load populates Config from environment variables or defaults.
@@ -121,6 +127,16 @@ func Load() *Config {
 		}
 	}
 
+	generateDatasetStr := os.Getenv("GENERATE_DATASET")
+	generateDataset := false
+	if generateDatasetStr == "true" {
+		generateDataset = true
+	}
+	datasetFolder := os.Getenv("DATASET_FOLDER")
+	if datasetFolder == "" {
+		datasetFolder = "./data"
+	}
+
 	return &Config{
 		SuiNode:           suiNode,
 		JSONRPCURL:        jsonRPCURL,
@@ -147,6 +163,10 @@ func Load() *Config {
 			FilePath:  logFilePath,
 			WithTime:  true,
 			WithLevel: true,
+		},
+		DatasetConfig: DatasetConfig{
+			Generate: generateDataset,
+			Folder:   datasetFolder,
 		},
 	}
 }

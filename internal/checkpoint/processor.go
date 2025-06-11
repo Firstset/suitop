@@ -26,15 +26,18 @@ type Processor struct {
 	currentEpoch uint64
 	committee    []val.ValidatorInfo
 	plainMode    bool // When true, output to stdout instead of TUI
+	dataset      *DatasetManager
+	reportCount  int
 }
 
 // NewProcessor creates a new checkpoint processor.
-func NewProcessor(valLoader *val.Loader, statsManager *StatsManager, cfg config.ProcessorConfig, plainMode bool) *Processor {
+func NewProcessor(valLoader *val.Loader, statsManager *StatsManager, cfg config.ProcessorConfig, plainMode bool, dataset *DatasetManager) *Processor {
 	return &Processor{
 		valLoader:    valLoader,
 		statsManager: statsManager,
 		cfg:          cfg,
 		plainMode:    plainMode,
+		dataset:      dataset,
 	}
 }
 
@@ -51,6 +54,9 @@ func (p *Processor) Run(ctx context.Context, initialEpoch uint64, initialCommitt
 		case receivedCheckpoint, ok := <-checkpointStream:
 			if !ok {
 				log.Println("Checkpoint channel closed, exiting processor loop.")
+				if p.dataset != nil {
+					p.dataset.Close()
+				}
 				return
 			}
 
@@ -119,6 +125,11 @@ func (p *Processor) Run(ctx context.Context, initialEpoch uint64, initialCommitt
 				}
 			}
 
+			if p.dataset != nil {
+				p.dataset.RecordCheckpoint(p.currentEpoch, receivedCheckpoint.GetSequenceNumber(), bitmap, p.committee)
+				p.reportCount++
+			}
+
 			// If uiChan is provided, send a snapshot to the UI
 			if uiChan != nil {
 				// Convert the internal validator info to the types package format
@@ -154,12 +165,21 @@ func (p *Processor) Run(ctx context.Context, initialEpoch uint64, initialCommitt
 					Stats:         statsForUI,
 				}
 			} else {
-				// If no UI channel, fall back to printing to console (which should be plain mode)
-				p.printReport(receivedCheckpoint.GetSequenceNumber(), os.Stdout)
+				if p.dataset != nil {
+					if p.reportCount%10 == 0 {
+						p.printReport(receivedCheckpoint.GetSequenceNumber(), os.Stdout)
+						fmt.Println("[dataset mode] Press 'q' then Enter to stop and save dataset.")
+					}
+				} else {
+					p.printReport(receivedCheckpoint.GetSequenceNumber(), os.Stdout)
+				}
 			}
 
 		case <-ctx.Done():
 			log.Println("Context done, exiting processor loop.")
+			if p.dataset != nil {
+				p.dataset.Close()
+			}
 			return
 		}
 	}
