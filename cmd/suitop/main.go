@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto/tls"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"google.golang.org/grpc"
@@ -25,12 +27,13 @@ import (
 )
 
 var (
-	helpFlagVal        *bool
-	plainModeFlagVal   *bool
-	noAltScreenFlagVal *bool
-	logToFileFlagVal   *bool
-	logFilePathFlagVal *string
-	networkFlagVal     *string
+	helpFlagVal            *bool
+	plainModeFlagVal       *bool
+	noAltScreenFlagVal     *bool
+	logToFileFlagVal       *bool
+	logFilePathFlagVal     *string
+	networkFlagVal         *string
+	generateDatasetFlagVal *bool
 )
 
 func main() {
@@ -42,6 +45,7 @@ func main() {
 	noAltScreenFlagVal = flag.Bool("no-alt-screen", false, "Run inside current terminal buffer (overrides NO_ALT_SCREEN env var, useful for tmux logs)")
 	logToFileFlagVal = flag.Bool("log-to-file", false, "Write logs to a file (overrides LOG_TO_FILE env var)")
 	networkFlagVal = flag.String("network", "mainnet", "Network to connect to")
+	generateDatasetFlagVal = flag.Bool("generate-dataset", false, "Enable dataset generation mode")
 	// Default for the flag variable itself. This is used if --log-file is not provided by the user.
 	// It's also used as a fallback for TUI mode if no other path is configured.
 	logFilePathFlagVal = flag.String("log-file", "./logs/suitop.log", "Path to log file (overrides LOG_FILE_PATH env var")
@@ -86,6 +90,13 @@ func main() {
 	if flagWasSet("log-file") {
 		// If --log-file is explicitly set, its value (even if it's the flag's own default path) overrides cfg.
 		cfg.LogConfig.FilePath = *logFilePathFlagVal
+	}
+	if flagWasSet("generate-dataset") {
+		cfg.DatasetConfig.Generate = *generateDatasetFlagVal
+	}
+
+	if cfg.DatasetConfig.Generate {
+		cfg.UIConfig.PlainMode = true
 	}
 	// If --log-file was NOT set, cfg.LogConfig.FilePath retains the value from config.Load()
 	// (which is from LOG_FILE_PATH env var or config's internal default like ~/.suitop/logs/suitop.log).
@@ -168,6 +179,18 @@ func main() {
 	stopSignalHandler := util.SetupSignalHandler(cancel)
 	defer stopSignalHandler() // Ensure the signal handler goroutine is cleaned up
 
+	if cfg.DatasetConfig.Generate {
+		go func() {
+			scanner := bufio.NewScanner(os.Stdin)
+			for scanner.Scan() {
+				if strings.TrimSpace(scanner.Text()) == "q" {
+					cancel()
+					return
+				}
+			}
+		}()
+	}
+
 	// gRPC connection
 	var creds credentials.TransportCredentials
 	if cfg.GRPC.UseTLS { // Assuming config will have TLS options
@@ -223,10 +246,22 @@ func main() {
 	log.Println("Starting checkpoint processing loop...")
 
 	// The processor will contain the main loop logic
-	processor := checkpoint.NewProcessor(valLoader, statsManager, cfg.ProcessorConfig, cfg.UIConfig.PlainMode)
+	var datasetMgr *checkpoint.DatasetManager
+	if cfg.DatasetConfig.Generate {
+		var err error
+		datasetMgr, err = checkpoint.NewDatasetManager(cfg.DatasetConfig.Folder)
+		if err != nil {
+			log.Fatalf("failed to create dataset folder: %v", err)
+		}
+	}
+
+	processor := checkpoint.NewProcessor(valLoader, statsManager, cfg.ProcessorConfig, cfg.UIConfig.PlainMode, datasetMgr)
 
 	if cfg.UIConfig.PlainMode {
 		// In plain mode, run the processor directly in this goroutine
+		if cfg.DatasetConfig.Generate {
+			fmt.Println("Dataset generation mode active. Press 'q' then Enter to stop and save.")
+		}
 		processor.Run(ctx, initialEpoch, initialCommittee, checkpointStream, nil)
 	} else {
 		// Channel for sending state updates to the UI
