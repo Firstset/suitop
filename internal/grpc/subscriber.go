@@ -43,11 +43,10 @@ func SubscribeToCheckpoints(
 		log.Println("Attempting to subscribe to checkpoints...")
 		stream, err := subClient.SubscribeCheckpoints(ctx, &subPb.SubscribeCheckpointsRequest{
 			ReadMask: &fieldmaskpb.FieldMask{
-				// Ensure these paths are correct for subPb.CheckpointData fields you need.
-				// Original main.go used: "signature", "sequence_number", "epoch"
-				// Assuming CheckpointData has these or equivalent.
-				// If CheckpointData contains a nested Checkpoint struct with these, adjust paths e.g. "checkpoint.signature"
-				Paths: []string{"signature", "sequence_number", "epoch"},
+				// We only require the aggregated signature (which includes
+				// the epoch information) and the sequence number of the
+				// checkpoint. Requesting fewer fields reduces payload size.
+				Paths: []string{"signature", "sequence_number"},
 			},
 		})
 
