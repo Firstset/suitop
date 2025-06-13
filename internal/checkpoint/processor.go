@@ -68,8 +68,10 @@ func (p *Processor) Run(ctx context.Context, initialEpoch uint64, initialCommitt
 
 			p.statsManager.IncrementTotalCheckpointsWithSig()
 
-			// Assuming Summary has an Epoch field
-			checkpointEpochVal := receivedCheckpoint.GetSummary().GetEpoch()
+			// Epoch value is stored inside the validator aggregated signature
+			// which is guaranteed to be present in the subscription
+			// because we request the full signature message.
+			checkpointEpochVal := receivedCheckpoint.GetSignature().GetEpoch()
 
 			// Epoch change detection and committee reload
 			if checkpointEpochVal > p.currentEpoch {
